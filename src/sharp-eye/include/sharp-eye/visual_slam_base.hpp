@@ -61,6 +61,5 @@ class VisualSlamBase{
        std::vector<LocalMap> local_maps;
        std::vector<Landmark> enclosed_landmarks;
        g2o::OptimizableGraph pose_graph;
-       
-   }
+   };
 };
