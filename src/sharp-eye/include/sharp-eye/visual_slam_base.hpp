@@ -16,11 +16,7 @@ class VisualSlamBase{
        cv::Mat descriptor; 
        double response; 
    };
-
-   typedef struct framepoint Framepoint;
-   typedef struct landmark Landmark;
-
-
+   struct Landmark;
    struct Framepoint{
        // A framepoint holds the information of a keypoint and its track
        KeypointWD keypoint_l, keypoint_r;

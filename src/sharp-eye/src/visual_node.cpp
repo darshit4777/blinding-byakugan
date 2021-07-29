@@ -3,6 +3,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <cv_bridge/cv_bridge.h>
 #include <boost/bind.hpp>
+#include <sharp-eye/visual_triangulation.hpp>
 
 /**
  * This file will create an executable which will serve as a test node and 
@@ -48,8 +49,15 @@ int main(int argc, char **argv)
   image_transport::Subscriber imageSub_r = it.subscribe("cam1/image_raw", 1, boost::bind(CameraCallback,_1,1));
   cv::namedWindow(OPENCV_WINDOW);
 
+  VisualTriangulation triangulator;
+  std::vector<VisualSlamBase::KeypointWD> features;
   while(ros::ok()){
       ros::spinOnce();
+      if(received_l){
+          triangulator.DetectFeatures(&image_l,true);
+      }
+      cv::imshow(OPENCV_WINDOW,image_l);
+      cv::waitKey(0.1);
   }
   cv::destroyAllWindows();
   

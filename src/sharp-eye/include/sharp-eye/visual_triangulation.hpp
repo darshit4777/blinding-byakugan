@@ -39,7 +39,7 @@ class VisualTriangulation{
      * @param left camera object 
      * @param right camera object
      */
-    VisualTriangulation(const VisualSlamBase::Camera &left,const VisualSlamBase::Camera &right);
+    VisualTriangulation();
 
     /**
      * @brief Detects the ORB features in an image and retursn them in a vector
@@ -48,7 +48,7 @@ class VisualTriangulation{
      * @param img_ptr 
      * @return std::vector<VisualSlamBase::KeypointWD> 
      */
-    FeatureVector DetectFeatures(cv::Mat* img_ptr);
+    FeatureVector DetectFeatures(cv::Mat* img_ptr,bool draw);
 
     /**
      * @brief Extracts the descriptors for a keypoint vector and adds them to the 
@@ -67,5 +67,11 @@ class VisualTriangulation{
      * @return MatchVector 
      */
     MatchVector GetKeypointMatches(FeatureVector &left_vec, FeatureVector &right_vec);
+
+    /**
+     * @brief Destroy the Visual Triangulation object
+     * 
+     */
+    ~VisualTriangulation();
     
 };
