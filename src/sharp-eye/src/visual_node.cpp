@@ -11,17 +11,26 @@
 
 cv::Mat image_l;
 cv::Mat image_r;
- static const std::string OPENCV_WINDOW = "Image window";
+bool received_l,received_r;
+static const std::string OPENCV_WINDOW = "Image window";
 
-void CameraCallback(const sensor_msgs::ImageConstPtr& msg,cv::Mat &image){
+
+void CameraCallback(const sensor_msgs::ImageConstPtr& msg,int cam){
     // Simply store the ros image into an opencv format
     cv_bridge::CvImagePtr cv_ptr;
     try
     {
-      cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::TYPE_8UC1);
-      image = cv_ptr->image;
-      cv::imshow(OPENCV_WINDOW,image);
-      return;
+        cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::TYPE_8UC1);
+        if(cam == 0){
+            image_l = cv_ptr->image;
+            received_l = true;
+        }
+        else if(cam == 1){
+            image_r = cv_ptr->image;
+            received_r = true;
+        };
+        
+        return;
     }
     catch (cv_bridge::Exception& e)
     {
@@ -35,7 +44,13 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "image_listener");
   ros::NodeHandle nh;
   image_transport::ImageTransport it(nh);
-  image_transport::Subscriber imageSub_l = it.subscribe("camera/image", 1, boost::bind(CameraCallback,_1,image_l));
-  image_transport::Subscriber imageSub_r = it.subscribe("camera/image", 1, boost::bind(CameraCallback,_1,image_r));
-  ros::spin();
+  image_transport::Subscriber imageSub_l = it.subscribe("cam0/image_raw", 1, boost::bind(CameraCallback,_1,0));
+  image_transport::Subscriber imageSub_r = it.subscribe("cam1/image_raw", 1, boost::bind(CameraCallback,_1,1));
+  cv::namedWindow(OPENCV_WINDOW);
+
+  while(ros::ok()){
+      ros::spinOnce();
+  }
+  cv::destroyAllWindows();
+  
 }
