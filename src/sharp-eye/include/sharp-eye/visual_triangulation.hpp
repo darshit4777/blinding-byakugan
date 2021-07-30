@@ -23,7 +23,7 @@ class VisualTriangulation{
 
     cv::FlannBasedMatcher matcher;
     std::vector<cv::DMatch> keypoint_matches;
-
+    
     // Image Handling
     cv::Mat image_l;
     cv::Mat image_r;

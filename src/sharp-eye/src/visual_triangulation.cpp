@@ -77,6 +77,66 @@ FeatureVector VisualTriangulation::ExtractKeypointDescriptors(cv::Mat* img_ptr,F
     return out_vec; 
 };
 
+MatchVector VisualTriangulation::GetKeypointMatches(FeatureVector &left_vec, FeatureVector &right_vec){
+    /**
+     * @brief Uses the FLANN matcher to compute matches between two feature vectors
+     * 
+     */
+
+    // Preprocessing 
+    // Before calling the matcher, we need to arrange our datastructures
+    cv::Mat descriptor_l, descriptor_r;
+    std::vector<cv::KeyPoint> keypoint_vec_l, keypoint_vec_r;
+
+    for(int i =0; i < left_vec.size(); i++){
+        descriptor_l.row(i) = left_vec[i].descriptor;
+        keypoint_vec_l[i] = left_vec[i].keypoint;
+    }
+
+    for(int i =0; i < right_vec.size(); i++){
+        descriptor_r.row(i) = right_vec[i].descriptor;
+        keypoint_vec_r[i] = right_vec[i].keypoint;
+    }
+
+    // Calling the matcher to create matches
+    // The nomenclature used for matching is query and train. 
+    // The query set is the input set for which you want to find matches
+    // The train set is the set in which you want to find matches to the query set,
+
+    std::vector< std::vector<cv::DMatch> > knn_matches;
+    
+    matcher.knnMatch(descriptor_l,descriptor_r,knn_matches,2);
+
+    //-- Filter matches using the Lowe's ratio test
+    const float ratio_thresh = 0.7f;
+    std::vector<cv::DMatch> good_matches;
+    for (size_t i = 0; i < knn_matches.size(); i++)
+    {
+        if (knn_matches[i][0].distance < ratio_thresh * knn_matches[i][1].distance)
+        {
+            good_matches.push_back(knn_matches[i][0]);
+        }
+    };
+
+    // Now we have a vector with good matches holding the query indices
+    // and the train indices
+
+    MatchVector matched_vector;
+    for(int i = 0; i < good_matches.size(); i++){
+        VisualSlamBase::KeypointWD keypoint_l, keypoint_r;
+        std::pair<VisualSlamBase::KeypointWD,VisualSlamBase::KeypointWD> matched_pair;
+        keypoint_l = left_vec[i];
+        keypoint_r = right_vec[i];
+
+        matched_pair.first = keypoint_l;
+        matched_pair.second = keypoint_r;
+
+        matched_vector.push_back(matched_pair);
+    }
+
+    return matched_vector;
+};
+
 VisualTriangulation::~VisualTriangulation(){
     return;
 };
