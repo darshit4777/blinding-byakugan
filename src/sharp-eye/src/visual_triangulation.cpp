@@ -39,9 +39,7 @@ FeatureVector VisualTriangulation::DetectFeatures(cv::Mat* img_ptr,bool draw){
     // Copy over the keypoints vector into the feature vector
     for(cv::KeyPoint keypoint : keypoints){
         VisualSlamBase::KeypointWD feature;
-        feature.pixel_x = keypoint.pt.x;
-        feature.pixel_y = keypoint.pt.y;
-        feature.response = keypoint.response;
+        feature.keypoint = keypoint;
         features.push_back(feature);
     }
 
@@ -50,6 +48,33 @@ FeatureVector VisualTriangulation::DetectFeatures(cv::Mat* img_ptr,bool draw){
     }
 
     return features;
+};
+
+FeatureVector VisualTriangulation::ExtractKeypointDescriptors(cv::Mat* img_ptr,FeatureVector &feature_vec){
+    /**
+     * @brief Extract the keypoint descriptor for a feature vector.
+     * Returns a FeatureVector (std vector of KeypointWD) with the descriptor
+     * field filled out
+     */
+    FeatureVector out_vec;
+    if(feature_vec.empty()){
+        std::cout<<"Warning : Feature vector was empty, no descriptors could be added"<<std::endl;
+        return out_vec;
+    }
+    
+    std::vector<cv::KeyPoint> keypoints;
+    for(VisualSlamBase::KeypointWD &feature : feature_vec){
+        cv::Mat descriptor;
+        keypoints.push_back(feature.keypoint);
+        orb_descriptor->compute(*img_ptr,keypoints,descriptor);
+        feature.descriptor = descriptor;
+
+        VisualSlamBase::KeypointWD out_feature;
+        out_feature = feature;
+        out_feature.descriptor = descriptor;
+        out_vec.push_back(out_feature);
+    }
+    return out_vec; 
 };
 
 VisualTriangulation::~VisualTriangulation(){

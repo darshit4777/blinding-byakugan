@@ -54,10 +54,10 @@ int main(int argc, char **argv)
   while(ros::ok()){
       ros::spinOnce();
       if(received_l){
-          triangulator.DetectFeatures(&image_l,true);
+          features = triangulator.DetectFeatures(&image_l,false);
+          triangulator.ExtractKeypointDescriptors(&image_l,features);
       }
-      cv::imshow(OPENCV_WINDOW,image_l);
-      cv::waitKey(0.1);
+      
   }
   cv::destroyAllWindows();
   

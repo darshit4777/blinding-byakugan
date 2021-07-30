@@ -11,10 +11,8 @@ class VisualSlamBase{
    public:
    struct KeypointWD{
        // Keypoint with a descriptor
-       int pixel_x;  
-       int pixel_y; 
+       cv::KeyPoint keypoint;
        cv::Mat descriptor; 
-       double response; 
    };
    struct Landmark;
    struct Framepoint{

@@ -57,7 +57,7 @@ class VisualTriangulation{
      * @param keypoint_vec
      * @return FeatureVector with descriptors
      */
-    FeatureVector ExtractKeypointDescriptors(FeatureVector &keypoint_vec);
+    FeatureVector ExtractKeypointDescriptors(cv::Mat* img_ptr,FeatureVector &keypoint_vec);
 
     /**
      * @brief Get the Keypoint Matches between two Keypoint/Feature Vectors
