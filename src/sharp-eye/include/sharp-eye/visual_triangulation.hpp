@@ -13,7 +13,10 @@ class VisualTriangulation{
     // Cameras
     VisualSlamBase::Camera camera_l; //< Left camera intrinsics
     VisualSlamBase::Camera camera_r; //< Right camera intrinsics
-    
+    double camera_baseline;
+    double focal_length_x;
+    double focal_length_y;
+
     // Feature Handling
     cv::Ptr<cv::FeatureDetector> orb_detector;
     cv::Ptr<cv::DescriptorExtractor> orb_descriptor;
@@ -23,12 +26,13 @@ class VisualTriangulation{
 
     cv::FlannBasedMatcher matcher;
     std::vector<cv::DMatch> keypoint_matches;
-    
+
     // Image Handling
     cv::Mat image_l;
     cv::Mat image_r;
 
     typedef std::vector<VisualSlamBase::KeypointWD> FeatureVector;
+    typedef std::vector<VisualSlamBase::Framepoint> FramepointVector;
     typedef std::vector<std::pair<VisualSlamBase::KeypointWD,VisualSlamBase::KeypointWD>> MatchVector;
 
     // Methods
@@ -67,6 +71,15 @@ class VisualTriangulation{
      * @return MatchVector 
      */
     MatchVector GetKeypointMatches(FeatureVector &left_vec, FeatureVector &right_vec);
+
+    /**
+     * @brief Generates 3D coordinates for all matched keypoints using triangulation.
+     * 
+     * @param matched_features 
+     * @return FramepointVector 
+     */
+    FramepointVector Generate3DCoordinates(MatchVector &matched_features, FramepointVector framepoints_in, double baseline, double focal_length,Eigen::Matrix3d camera_intrinsics);
+
 
     /**
      * @brief Destroy the Visual Triangulation object

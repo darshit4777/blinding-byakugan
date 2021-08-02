@@ -1,6 +1,7 @@
 #include <sharp-eye/visual_triangulation.hpp>
 
 typedef std::vector<VisualSlamBase::KeypointWD> FeatureVector;
+typedef std::vector<VisualSlamBase::Framepoint> FramepointVector;
 typedef std::vector<std::pair<VisualSlamBase::KeypointWD,VisualSlamBase::KeypointWD>> MatchVector;
 
 VisualTriangulation::VisualTriangulation(){
@@ -136,6 +137,52 @@ MatchVector VisualTriangulation::GetKeypointMatches(FeatureVector &left_vec, Fea
 
     return matched_vector;
 };
+
+FramepointVector Generate3DCoordinates(MatchVector &matched_features,FramepointVector &framepoints_in, double baseline, double focal_length, Eigen::Matrix3d camera_intrinsics){
+    /**
+     * @brief Uses the camera baseline and matched keypoints from left and right
+     * cameras to generate 3D coordinates of keypoints.
+     * 
+     */
+
+    // Calculating the Depth and X Y points for each feature. 
+
+    // We will consider the left camera as the origin for these calculations
+
+    for(int i =0; i < matched_features.size(); i++){
+        // Each matched feature is stored as a pair of KeypointWD
+        // The first is left and the second is right
+        framepoints_in[i].keypoint_l = matched_features[i].first;
+        framepoints_in[i].keypoint_r = matched_features[i].second;
+
+        Eigen::Vector3d camera_coordinates; // Coordinates in the camera frame
+        
+        // Calculating pixel euclidean distance
+        double px_distance,xl,yl,xr,yr;
+        xl = matched_features[i].first.keypoint.pt.x;
+        yl = matched_features[i].first.keypoint.pt.y;
+        xr = matched_features[i].second.keypoint.pt.x;
+        yr = matched_features[i].second.keypoint.pt.y;
+
+        px_distance = sqrt(pow(xl-xr,2) + pow(yl-yr,2));
+
+        camera_coordinates.z() = focal_length * baseline/px_distance;
+
+        double cx = camera_intrinsics[0,3];
+        double cy = camera_intrinsics[1,3];
+        double fx = camera_intrinsics[0,0];
+        double fy = camera_intrinsics[1,1];
+
+        camera_coordinates.x() = (xl - cx)*camera_coordinates.z()/fx;
+        camera_coordinates.y() = (yl - cy)*camera_coordinates.z()/fy;
+        
+        // Now the camera coordinates are assigned to the specific framepoint
+
+        framepoints_in[i].camera_coordinates = camera_coordinates;
+    };
+
+    return;
+}
 
 VisualTriangulation::~VisualTriangulation(){
     return;
