@@ -64,6 +64,15 @@ class VisualTriangulation{
     FeatureVector ExtractKeypointDescriptors(cv::Mat* img_ptr,FeatureVector &keypoint_vec);
 
     /**
+     * @brief Detects keypoints and computes features in a single function
+     * 
+     * @param img_ptr 
+     * @param keypoint_vec 
+     * @param draw 
+     * @return FeatureVector 
+     */
+    FeatureVector DetectAndComputeFeatures(cv::Mat* img_ptr,FeatureVector &keypoint_vec,bool draw);
+    /**
      * @brief Get the Keypoint Matches between two Keypoint/Feature Vectors
      * 
      * @param left_vec left camera features

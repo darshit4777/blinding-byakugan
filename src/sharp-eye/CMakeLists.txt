@@ -143,6 +143,7 @@ add_dependencies(visual_triangulation ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catk
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(visual_node src/visual_node.cpp)
+add_executable(test_node src/tests.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -153,9 +154,16 @@ add_executable(visual_node src/visual_node.cpp)
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 add_dependencies(visual_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(test_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(visual_node
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBS}
+  visual_triangulation
+)
+
+target_link_libraries(test_node
   ${catkin_LIBRARIES}
   ${OpenCV_LIBS}
   visual_triangulation

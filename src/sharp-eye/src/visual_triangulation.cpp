@@ -16,6 +16,9 @@ VisualTriangulation::VisualTriangulation(){
         // Initialzing the ORB Feature Descriptor
         orb_descriptor = cv::ORB::create();
         
+        // Initializing the matcher
+        
+        matcher = cv::FlannBasedMatcher(new cv::flann::LshIndexParams(20, 10, 2));
         //detector->detect(src,keypoints);
         //drawKeypoints(dst, keypoints, dst, Scalar::all(-1), DrawMatchesFlags::DRAW_OVER_OUTIMG);
         std::cout<<"Visual Triangulation Initialized"<<std::endl;
@@ -51,6 +54,31 @@ FeatureVector VisualTriangulation::DetectFeatures(cv::Mat* img_ptr,bool draw){
     return features;
 };
 
+FeatureVector VisualTriangulation::DetectAndComputeFeatures(cv::Mat* img_ptr,FeatureVector &features,bool draw){
+    std::vector<cv::KeyPoint> keypoints;
+    cv::Mat descriptors;
+    orb_detector->detectAndCompute(*img_ptr,cv::noArray(),keypoints,descriptors);
+
+    if(keypoints.empty()){
+        std::cout<<"Warning : No keypoints detected in image"<<std::endl;
+        return features;
+    };
+    // Copy over the keypoints vector into the feature vector
+    
+    for(int i = 0; i < keypoints.size(); i++){
+        VisualSlamBase::KeypointWD feature;
+        feature.keypoint = keypoints[i];
+        feature.descriptor = cv::Mat(descriptors.row(i));
+        features.push_back(feature);
+    }
+
+    if(draw){
+        cv::drawKeypoints(*img_ptr, keypoints, *img_ptr, cv::Scalar::all(-1), cv::DrawMatchesFlags::DRAW_OVER_OUTIMG);
+    }
+
+    return features;
+}
+
 FeatureVector VisualTriangulation::ExtractKeypointDescriptors(cv::Mat* img_ptr,FeatureVector &feature_vec){
     /**
      * @brief Extract the keypoint descriptor for a feature vector.
@@ -80,34 +108,46 @@ FeatureVector VisualTriangulation::ExtractKeypointDescriptors(cv::Mat* img_ptr,F
 
 MatchVector VisualTriangulation::GetKeypointMatches(FeatureVector &left_vec, FeatureVector &right_vec){
     /**
-     * @brief Uses the FLANN matcher to compute matches between two feature vectors
+     * @brief Uses the KNN matcher to compute matches between two feature vectors
      * 
      */
 
+    MatchVector matched_vector;
     // Preprocessing 
     // Before calling the matcher, we need to arrange our datastructures
-    cv::Mat descriptor_l, descriptor_r;
+    cv::Mat descriptor_l;
+    cv::Mat descriptor_r;
+    
     std::vector<cv::KeyPoint> keypoint_vec_l, keypoint_vec_r;
 
     for(int i =0; i < left_vec.size(); i++){
-        descriptor_l.row(i) = left_vec[i].descriptor;
-        keypoint_vec_l[i] = left_vec[i].keypoint;
+        descriptor_l.push_back(left_vec[i].descriptor);
+        keypoint_vec_l.push_back(left_vec[i].keypoint);
     }
 
     for(int i =0; i < right_vec.size(); i++){
-        descriptor_r.row(i) = right_vec[i].descriptor;
-        keypoint_vec_r[i] = right_vec[i].keypoint;
+        descriptor_r.push_back(right_vec[i].descriptor);
+        keypoint_vec_r.push_back(right_vec[i].keypoint);
     }
 
     // Calling the matcher to create matches
     // The nomenclature used for matching is query and train. 
     // The query set is the input set for which you want to find matches
     // The train set is the set in which you want to find matches to the query set,
-
-    std::vector< std::vector<cv::DMatch> > knn_matches;
     
-    matcher.knnMatch(descriptor_l,descriptor_r,knn_matches,2);
+    std::vector< std::vector<cv::DMatch> > knn_matches;
+    if(descriptor_r.empty()){
+        std::cout<<"Warning - No Descriptors for Right camera"<<std::endl;
+        return matched_vector;
+    }
+    if(descriptor_l.empty()){
+        std::cout<<"Warning - No Descriptors for Left camera"<<std::endl;
+        return matched_vector;
+    };
 
+    //std::cout<<descriptor_r.rows<<" "<<descriptor_r.cols<<std::endl;
+    //std::cout<<descriptor_l.rows<<" "<<descriptor_l.cols<<std::endl;
+    matcher.knnMatch(descriptor_l,descriptor_r,knn_matches,2);
     //-- Filter matches using the Lowe's ratio test
     const float ratio_thresh = 0.7f;
     std::vector<cv::DMatch> good_matches;
@@ -122,7 +162,7 @@ MatchVector VisualTriangulation::GetKeypointMatches(FeatureVector &left_vec, Fea
     // Now we have a vector with good matches holding the query indices
     // and the train indices
 
-    MatchVector matched_vector;
+    
     for(int i = 0; i < good_matches.size(); i++){
         VisualSlamBase::KeypointWD keypoint_l, keypoint_r;
         std::pair<VisualSlamBase::KeypointWD,VisualSlamBase::KeypointWD> matched_pair;
@@ -168,10 +208,10 @@ FramepointVector Generate3DCoordinates(MatchVector &matched_features,FramepointV
 
         camera_coordinates.z() = focal_length * baseline/px_distance;
 
-        double cx = camera_intrinsics[0,3];
-        double cy = camera_intrinsics[1,3];
-        double fx = camera_intrinsics[0,0];
-        double fy = camera_intrinsics[1,1];
+        double cx = camera_intrinsics(0,3);
+        double cy = camera_intrinsics(1,3);
+        double fx = camera_intrinsics(0,0);
+        double fy = camera_intrinsics(1,1);
 
         camera_coordinates.x() = (xl - cx)*camera_coordinates.z()/fx;
         camera_coordinates.y() = (yl - cy)*camera_coordinates.z()/fy;
@@ -181,7 +221,7 @@ FramepointVector Generate3DCoordinates(MatchVector &matched_features,FramepointV
         framepoints_in[i].camera_coordinates = camera_coordinates;
     };
 
-    return;
+    return framepoints_in;
 }
 
 VisualTriangulation::~VisualTriangulation(){
