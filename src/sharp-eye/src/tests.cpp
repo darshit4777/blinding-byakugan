@@ -4,7 +4,7 @@
 #include <cv_bridge/cv_bridge.h>
 #include <boost/bind.hpp>
 #include <sharp-eye/visual_triangulation.hpp>
-
+#include <Eigen/Dense>
 /**
  * This file will create an executable which will serve as a test node and 
  * later on will be repurposed to form the ROS layer
@@ -17,6 +17,7 @@ bool received_l,received_r;
 static const std::string OPENCV_WINDOW_LEFT = "Left Image window";
 static const std::string OPENCV_WINDOW_RIGHT = "Right Image window";
 typedef std::vector<std::pair<VisualSlamBase::KeypointWD,VisualSlamBase::KeypointWD>> MatchVector;
+typedef std::vector<VisualSlamBase::Framepoint> FramepointVector;
 
 void CameraCallback(const sensor_msgs::ImageConstPtr& msg,int cam){
     // Simply store the ros image into an opencv format
@@ -139,6 +140,46 @@ class TestGetMatchedKeypoints{
     };
 };
 
+class TestGenerate3DCoordinates{
+    public:
+    double focal_length = 457.975;
+    double baseline = 0.11;
+    Eigen::Matrix3d cam_intrinsics;
+    
+    TestGenerate3DCoordinates(){
+        cam_intrinsics <<  458.654,     0.0,    367.215,
+                               0.0, 457.296,    248.375,
+                               0.0,     0.0,        1.0;
+        TestMain();
+        return;
+    };
+    void TestMain(){
+        VisualTriangulation triangulator;
+        std::vector<VisualSlamBase::KeypointWD> features_l;
+        std::vector<VisualSlamBase::KeypointWD> features_r;
+        int count = 0;
+        while(ros::ok()){
+            ros::spinOnce();
+            if(received_l){
+                features_l.clear();
+                features_l = triangulator.DetectAndComputeFeatures(&image_l,features_l,false);
+                //count = count + 1;
+            }
+            if(received_r){
+                features_r.clear();
+                features_r = triangulator.DetectAndComputeFeatures(&image_r,features_r,false);
+            }
+            if(received_l && received_r){
+                // Get Matches
+                MatchVector matches = triangulator.GetKeypointMatches(features_l,features_r);
+                FramepointVector framepoints = triangulator.Generate3DCoordinates(matches,framepoints,baseline,focal_length,cam_intrinsics)
+            }
+        };
+        cv::destroyAllWindows();
+    }
+
+    }
+}
 int main(int argc, char **argv){
     ros::init(argc,argv,"image_listener");
     ros::NodeHandle nh;
