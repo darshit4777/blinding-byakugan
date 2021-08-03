@@ -95,23 +95,26 @@ class TestGetMatchedKeypoints{
         VisualTriangulation triangulator;
         std::vector<VisualSlamBase::KeypointWD> features_l;
         std::vector<VisualSlamBase::KeypointWD> features_r;
+        int count = 0;
         while(ros::ok()){
             ros::spinOnce();
             if(received_l){
+                features_l.clear();
                 features_l = triangulator.DetectAndComputeFeatures(&image_l,features_l,false);
+                //count = count + 1;
             }
             if(received_r){
+                features_r.clear();
                 features_r = triangulator.DetectAndComputeFeatures(&image_r,features_r,false);
             }
-            if(received_l && received_l){
+            if(received_l && received_r){
                 // Get Matches
-                //MatchVector matches = triangulator.GetKeypointMatches(features_l,features_r);
-                MatchVector matches = triangulator.GetEpipolarMatches(features_l,features_r);
+                MatchVector matches = triangulator.GetKeypointMatches(features_l,features_r);
                 DrawMatches(matches,&image_l,&image_r);
                 cv::imshow(OPENCV_WINDOW_LEFT,image_l);
                 cv::waitKey(5);
                 cv::imshow(OPENCV_WINDOW_RIGHT,image_r);
-                cv::waitKey(5);
+                cv::waitKey(5);   
             }
         };
         cv::destroyAllWindows();
@@ -120,7 +123,7 @@ class TestGetMatchedKeypoints{
     void DrawMatches(MatchVector matches,cv::Mat* left_img, cv::Mat* right_img){
         std::vector<cv::KeyPoint> keypoints_l;
         std::vector<cv::KeyPoint> keypoints_r;
-        std::cout<<matches.size()<<std::endl;
+        //std::cout<<matches.size()<<std::endl;
         if(matches.empty()){
             return;
         }
