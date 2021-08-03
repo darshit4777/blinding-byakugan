@@ -222,7 +222,81 @@ FramepointVector Generate3DCoordinates(MatchVector &matched_features,FramepointV
     };
 
     return framepoints_in;
-}
+};
+
+MatchVector GetEpipolarMatches(FeatureVector &left_vec, FeatureVector &right_vec){
+
+    MatchVector matched_keypoints;
+    
+    // Large sorting expression that is explained in the ProSLAM paper
+
+    // Sort Left
+    std::sort(left_vec.begin(),left_vec.end(),[](const VisualSlamBase::KeypointWD* a,const VisualSlamBase::KeypointWD* b){
+        return ((a->keypoint.pt.y < b->keypoint.pt.y)||(a->keypoint.pt.y == b->keypoint.pt.y && a->keypoint.pt.x < b->keypoint.pt.x));
+    });
+
+    // Sort Right
+    std::sort(right_vec.begin(),right_vec.end(),[](const VisualSlamBase::KeypointWD* a,const VisualSlamBase::KeypointWD* b){
+        return ((a->keypoint.pt.y < b->keypoint.pt.y)||(a->keypoint.pt.y == b->keypoint.pt.y && a->keypoint.pt.x < b->keypoint.pt.x));
+    });
+
+    //configuration
+    const float maximum_matching_distance = 2;
+    int idx_R = 0;
+    //loop over all left keypoints
+    for (int idx_L = 0; idx_L < left_vec.size(); idx_L++) {
+        
+        //stop condition
+        if (idx_R == right_vec.size()){
+            break;
+        }
+
+        //the right keypoints are on a lower row - skip left
+        while (left_vec[idx_L].keypoint.pt.y < right_vec[idx_R].keypoint.pt.y){
+            idx_L++;
+            if (idx_L == right_vec.size()){
+                break;
+            };
+        };
+
+        //the right keypoints are on an upper row - skip right
+        while (left_vec[idx_L].keypoint.pt.y > right_vec[idx_R].keypoint.pt.y){
+            idx_R++;
+            if (idx_R == right_vec.size()){
+                break;
+            }
+        }
+        //search bookkeeping
+        int idx_RS = idx_R;
+        float dist_best = maximum_matching_distance;
+        int idx_best_R = 0;
+        //scan epipolar line for current keypoint at idx_L
+        while (left_vec[idx_L].keypoint.pt.y == right_vec[idx_RS].keypoint.pt.y){
+            //zero disparity stop condition
+            if (right_vec[idx_RS].keypoint.pt.x >= left_vec[idx_L].keypoint.pt.x){
+                break;
+            }
+            //compute descriptor distance using hamming norm
+            const float dist = cv::norm(left_vec[idx_L].descriptor, right_vec[idx_RS].descriptor,cv::NORM_HAMMING);
+            if(dist < dist_best){
+                dist_best = dist;
+                idx_best_R = idx_RS;
+            };
+            idx_RS++;
+        };
+        //check if something was found
+        if (dist_best < maximum_matching_distance) {
+            std::pair<VisualSlamBase::KeypointWD,VisualSlamBase::KeypointWD> matched_pair;
+            matched_pair.first = left_vec[idx_L];
+            matched_pair.second = right_vec[idx_best_R];
+            
+            matched_keypoints.push_back(matched_pair);
+        };
+    };
+    return matched_keypoints;
+};
+
+
 
 VisualTriangulation::~VisualTriangulation(){
     return;
