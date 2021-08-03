@@ -224,24 +224,24 @@ FramepointVector Generate3DCoordinates(MatchVector &matched_features,FramepointV
     return framepoints_in;
 };
 
-MatchVector GetEpipolarMatches(FeatureVector &left_vec, FeatureVector &right_vec){
+MatchVector VisualTriangulation::GetEpipolarMatches(FeatureVector &left_vec, FeatureVector &right_vec){
 
     MatchVector matched_keypoints;
     
     // Large sorting expression that is explained in the ProSLAM paper
 
     // Sort Left
-    std::sort(left_vec.begin(),left_vec.end(),[](const VisualSlamBase::KeypointWD* a,const VisualSlamBase::KeypointWD* b){
-        return ((a->keypoint.pt.y < b->keypoint.pt.y)||(a->keypoint.pt.y == b->keypoint.pt.y && a->keypoint.pt.x < b->keypoint.pt.x));
+    std::sort(left_vec.begin(),left_vec.end(),[](const VisualSlamBase::KeypointWD& a,const VisualSlamBase::KeypointWD& b){
+        return ((a.keypoint.pt.y < b.keypoint.pt.y)||(a.keypoint.pt.y == b.keypoint.pt.y && a.keypoint.pt.x < b.keypoint.pt.x));
     });
 
     // Sort Right
-    std::sort(right_vec.begin(),right_vec.end(),[](const VisualSlamBase::KeypointWD* a,const VisualSlamBase::KeypointWD* b){
-        return ((a->keypoint.pt.y < b->keypoint.pt.y)||(a->keypoint.pt.y == b->keypoint.pt.y && a->keypoint.pt.x < b->keypoint.pt.x));
+    std::sort(right_vec.begin(),right_vec.end(),[](const VisualSlamBase::KeypointWD& a,const VisualSlamBase::KeypointWD& b){
+        return ((a.keypoint.pt.y < b.keypoint.pt.y)||(a.keypoint.pt.y == b.keypoint.pt.y && a.keypoint.pt.x < b.keypoint.pt.x));
     });
 
     //configuration
-    const float maximum_matching_distance = 2;
+    const float maximum_matching_distance = 6;
     int idx_R = 0;
     //loop over all left keypoints
     for (int idx_L = 0; idx_L < left_vec.size(); idx_L++) {

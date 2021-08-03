@@ -89,7 +89,14 @@ class VisualTriangulation{
      */
     FramepointVector Generate3DCoordinates(MatchVector &matched_features, FramepointVector framepoints_in, double baseline, double focal_length,Eigen::Matrix3d camera_intrinsics);
 
-
+    /**
+     * @brief Get matches with epipolar constraints
+     * 
+     * @param left_vec 
+     * @param right_vec 
+     * @return MatchVector 
+     */
+    MatchVector GetEpipolarMatches(FeatureVector &left_vec, FeatureVector &right_vec);
     /**
      * @brief Destroy the Visual Triangulation object
      * 

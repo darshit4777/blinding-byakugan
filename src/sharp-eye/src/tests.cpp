@@ -105,7 +105,8 @@ class TestGetMatchedKeypoints{
             }
             if(received_l && received_l){
                 // Get Matches
-                MatchVector matches = triangulator.GetKeypointMatches(features_l,features_r);
+                //MatchVector matches = triangulator.GetKeypointMatches(features_l,features_r);
+                MatchVector matches = triangulator.GetEpipolarMatches(features_l,features_r);
                 DrawMatches(matches,&image_l,&image_r);
                 cv::imshow(OPENCV_WINDOW_LEFT,image_l);
                 cv::waitKey(5);
@@ -119,12 +120,12 @@ class TestGetMatchedKeypoints{
     void DrawMatches(MatchVector matches,cv::Mat* left_img, cv::Mat* right_img){
         std::vector<cv::KeyPoint> keypoints_l;
         std::vector<cv::KeyPoint> keypoints_r;
-
+        std::cout<<matches.size()<<std::endl;
         if(matches.empty()){
             return;
         }
-
-        for(int i = 0; i < 5; i++){
+        
+        for(int i = 0; i < matches.size(); i++){
             cv::KeyPoint keypoint_l;
             cv::KeyPoint keypoint_r;
 
