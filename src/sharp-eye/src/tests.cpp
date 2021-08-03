@@ -45,12 +45,8 @@ void CameraCallback(const sensor_msgs::ImageConstPtr& msg,int cam){
 
 class TestDetectFeatures{
     public:
-    void TestMain(int argc,char** argv){
-        ros::init(argc,argv,"image_listener");
-        ros::NodeHandle nh;
-        image_transport::ImageTransport it(nh);
-        image_transport::Subscriber imageSub_l = it.subscribe("cam0/image_raw", 1, boost::bind(CameraCallback,_1,0));
-        image_transport::Subscriber imageSub_r = it.subscribe("cam1/image_raw", 1, boost::bind(CameraCallback,_1,1));
+    void TestMain(){
+        
 
         VisualTriangulation triangulator;
         std::vector<VisualSlamBase::KeypointWD> features;
@@ -71,7 +67,7 @@ class TestDetectFeatures{
     };
 
     TestDetectFeatures(int argc, char** argv){
-        TestMain(argc,argv);
+        TestMain();
     };
 
     ~TestDetectFeatures(){
@@ -81,17 +77,11 @@ class TestDetectFeatures{
 
 class TestGetMatchedKeypoints{
     public:
-    TestGetMatchedKeypoints(int argc,char** argv){
-        TestMain(argc,argv);
+    TestGetMatchedKeypoints(){
+        TestMain();
         return;
     }
-    void TestMain(int argc,char** argv){
-        ros::init(argc,argv,"image_listener");
-        ros::NodeHandle nh;
-        image_transport::ImageTransport it(nh);
-        image_transport::Subscriber imageSub_l = it.subscribe("cam0/image_raw", 1, boost::bind(CameraCallback,_1,0));
-        image_transport::Subscriber imageSub_r = it.subscribe("cam1/image_raw", 1, boost::bind(CameraCallback,_1,1));
-
+    void TestMain(){
         VisualTriangulation triangulator;
         std::vector<VisualSlamBase::KeypointWD> features_l;
         std::vector<VisualSlamBase::KeypointWD> features_r;
@@ -150,7 +140,12 @@ class TestGetMatchedKeypoints{
 };
 
 int main(int argc, char **argv){
+    ros::init(argc,argv,"image_listener");
+    ros::NodeHandle nh;
+    image_transport::ImageTransport it(nh);
+    image_transport::Subscriber imageSub_l = it.subscribe("cam0/image_raw", 1, boost::bind(CameraCallback,_1,0));
+    image_transport::Subscriber imageSub_r = it.subscribe("cam1/image_raw", 1, boost::bind(CameraCallback,_1,1));
     //TestDetectFeatures test(argc, argv);
-    TestGetMatchedKeypoints(argc,argv);
+    TestGetMatchedKeypoints();
     return 0;
 }
