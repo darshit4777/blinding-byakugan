@@ -178,7 +178,7 @@ MatchVector VisualTriangulation::GetKeypointMatches(FeatureVector &left_vec, Fea
     return matched_vector;
 };
 
-FramepointVector Generate3DCoordinates(MatchVector &matched_features,FramepointVector &framepoints_in, double baseline, double focal_length, Eigen::Matrix3d camera_intrinsics){
+FramepointVector VisualTriangulation::Generate3DCoordinates(MatchVector &matched_features,FramepointVector &framepoints_in, double baseline, double focal_length, Eigen::Matrix3d camera_intrinsics){
     /**
      * @brief Uses the camera baseline and matched keypoints from left and right
      * cameras to generate 3D coordinates of keypoints.
@@ -188,12 +188,12 @@ FramepointVector Generate3DCoordinates(MatchVector &matched_features,FramepointV
     // Calculating the Depth and X Y points for each feature. 
 
     // We will consider the left camera as the origin for these calculations
-
     for(int i =0; i < matched_features.size(); i++){
         // Each matched feature is stored as a pair of KeypointWD
         // The first is left and the second is right
-        framepoints_in[i].keypoint_l = matched_features[i].first;
-        framepoints_in[i].keypoint_r = matched_features[i].second;
+        VisualSlamBase::Framepoint framepoint;
+        framepoint.keypoint_l = matched_features[i].first;
+        framepoint.keypoint_r = matched_features[i].second;
 
         Eigen::Vector3d camera_coordinates; // Coordinates in the camera frame
         
@@ -204,21 +204,19 @@ FramepointVector Generate3DCoordinates(MatchVector &matched_features,FramepointV
         xr = matched_features[i].second.keypoint.pt.x;
         yr = matched_features[i].second.keypoint.pt.y;
 
-        px_distance = sqrt(pow(xl-xr,2) + pow(yl-yr,2));
-
+        px_distance = fabs(xl-xr);
         camera_coordinates.z() = focal_length * baseline/px_distance;
-
-        double cx = camera_intrinsics(0,3);
-        double cy = camera_intrinsics(1,3);
-        double fx = camera_intrinsics(0,0);
-        double fy = camera_intrinsics(1,1);
-
+        double cx = camera_intrinsics.coeff(0,2);
+        double cy = camera_intrinsics.coeff(1,2);
+        double fx = camera_intrinsics.coeff(0,0);
+        double fy = camera_intrinsics.coeff(1,1);
+        
         camera_coordinates.x() = (xl - cx)*camera_coordinates.z()/fx;
         camera_coordinates.y() = (yl - cy)*camera_coordinates.z()/fy;
-        
-        // Now the camera coordinates are assigned to the specific framepoint
 
-        framepoints_in[i].camera_coordinates = camera_coordinates;
+        // Now the camera coordinates are assigned to the specific framepoint
+        framepoint.camera_coordinates = camera_coordinates;
+        framepoints_in.push_back(framepoint);
     };
 
     return framepoints_in;

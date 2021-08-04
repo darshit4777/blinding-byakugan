@@ -17,6 +17,12 @@ find_package(catkin REQUIRED COMPONENTS
   cv_bridge
 )
 
+find_package( PCL 1.8 REQUIRED )
+include_directories( ${PCL_INCLUDE_DIRS} )
+add_definitions( ${PCL_DEFINITIONS} )
+link_directories( ${PCL_LIBRARY_DIRS} )
+
+
 find_package( OpenCV REQUIRED )
 include_directories( ${OpenCV_INCLUDE_DIRS} )
 
@@ -112,6 +118,7 @@ generate_messages(
 catkin_package(
   INCLUDE_DIRS include
   ${OpenCV_INCLUDE_DIRS}
+  ${PCL_INCLUDE_DIRS}
 #  LIBRARIES sharp-eye
 #  CATKIN_DEPENDS cv2 roscpp
 #  DEPENDS system_lib
@@ -127,6 +134,7 @@ include_directories(
   include
   ${catkin_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}
+  ${PCL_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -167,6 +175,7 @@ target_link_libraries(test_node
   ${catkin_LIBRARIES}
   ${OpenCV_LIBS}
   visual_triangulation
+  ${PCL_LIBRARIES}
 )
 
 #############

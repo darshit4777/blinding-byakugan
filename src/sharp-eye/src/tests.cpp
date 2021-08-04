@@ -5,6 +5,11 @@
 #include <boost/bind.hpp>
 #include <sharp-eye/visual_triangulation.hpp>
 #include <Eigen/Dense>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+#include <sensor_msgs/PointCloud.h>
+#include <sensor_msgs/PointCloud2.h>
+#include <pcl_conversions/pcl_conversions.h>
 /**
  * This file will create an executable which will serve as a test node and 
  * later on will be repurposed to form the ROS layer
@@ -145,18 +150,27 @@ class TestGenerate3DCoordinates{
     double focal_length = 457.975;
     double baseline = 0.11;
     Eigen::Matrix3d cam_intrinsics;
-    
-    TestGenerate3DCoordinates(){
+    typedef pcl::PointXYZI PointGray;
+    ros::Publisher pub;
+    ros::NodeHandle nh;
+
+    public:
+    TestGenerate3DCoordinates(const ros::NodeHandle &nodehandle){
+
         cam_intrinsics <<  458.654,     0.0,    367.215,
                                0.0, 457.296,    248.375,
                                0.0,     0.0,        1.0;
+
+        nh = nodehandle;
         TestMain();
         return;
     };
+
     void TestMain(){
         VisualTriangulation triangulator;
         std::vector<VisualSlamBase::KeypointWD> features_l;
         std::vector<VisualSlamBase::KeypointWD> features_r;
+        pub = nh.advertise< sensor_msgs::PointCloud2 > ("point_cloud", 5);
         int count = 0;
         while(ros::ok()){
             ros::spinOnce();
@@ -172,21 +186,62 @@ class TestGenerate3DCoordinates{
             if(received_l && received_r){
                 // Get Matches
                 MatchVector matches = triangulator.GetKeypointMatches(features_l,features_r);
-                FramepointVector framepoints = triangulator.Generate3DCoordinates(matches,framepoints,baseline,focal_length,cam_intrinsics)
-            }
+                //std::cout<<"No of matches "<<matches.size()<<std::endl;
+                FramepointVector framepoints;
+                triangulator.Generate3DCoordinates(matches,framepoints,baseline,focal_length,cam_intrinsics);
+                //std::cout<<"No of framepoints "<<framepoints.size()<<std::endl;
+                DrawPointCloud(framepoints,&image_l);
+            };
         };
         cv::destroyAllWindows();
-    }
+    };
+    
+    void DrawPointCloud(FramepointVector &framepoint_vec,cv::Mat* image_l){
+        
+        // Point Cloud ROS Msg
+        sensor_msgs::PointCloud2 point_cloud2;
 
-    }
-}
+        // Declaring the point cloud
+        pcl::PointCloud<PointGray> pcl_cloud;
+
+        // Creating the point cloud
+        for(auto framepoint : framepoint_vec){
+            PointGray point;
+            point.x = framepoint.camera_coordinates[0];
+            point.y = framepoint.camera_coordinates[1];
+            point.z = framepoint.camera_coordinates[2];
+
+            double x,y;
+            x = framepoint.keypoint_l.keypoint.pt.x;
+            y = framepoint.keypoint_l.keypoint.pt.y;
+            cv::Scalar intensity;
+            intensity = image_l->at<uchar>(x,y);
+            point.intensity = intensity.val[0];
+
+            pcl_cloud.points.push_back(point);
+        };
+
+        // Choosing a few fancy options
+        pcl_cloud.is_dense = false;
+        pcl_cloud.height = 1;
+        pcl_cloud.width = pcl_cloud.points.size();
+        //std::cout<<"Point Cloud Size "<<pcl_cloud.points.size()<<std::endl;
+        pcl::toROSMsg<PointGray>(pcl_cloud,point_cloud2);
+        point_cloud2.header.frame_id = "world";
+        pub.publish(point_cloud2);
+        return;
+    };
+};
+
+
 int main(int argc, char **argv){
     ros::init(argc,argv,"image_listener");
     ros::NodeHandle nh;
     image_transport::ImageTransport it(nh);
     image_transport::Subscriber imageSub_l = it.subscribe("cam0/image_raw", 1, boost::bind(CameraCallback,_1,0));
     image_transport::Subscriber imageSub_r = it.subscribe("cam1/image_raw", 1, boost::bind(CameraCallback,_1,1));
-    //TestDetectFeatures test(argc, argv);
-    TestGetMatchedKeypoints();
+    //TestDetectFeatures test;
+    //TestGetMatchedKeypoints test;
+    TestGenerate3DCoordinates test(nh);
     return 0;
 }
