@@ -166,8 +166,9 @@ MatchVector VisualTriangulation::GetKeypointMatches(FeatureVector &left_vec, Fea
     for(int i = 0; i < good_matches.size(); i++){
         VisualSlamBase::KeypointWD keypoint_l, keypoint_r;
         std::pair<VisualSlamBase::KeypointWD,VisualSlamBase::KeypointWD> matched_pair;
-        keypoint_l = left_vec[i];
-        keypoint_r = right_vec[i];
+        
+        keypoint_l = left_vec[good_matches[i].queryIdx];
+        keypoint_r = right_vec[good_matches[i].trainIdx];
 
         matched_pair.first = keypoint_l;
         matched_pair.second = keypoint_r;
@@ -175,6 +176,9 @@ MatchVector VisualTriangulation::GetKeypointMatches(FeatureVector &left_vec, Fea
         matched_vector.push_back(matched_pair);
     }
 
+    if(matched_vector.empty()){
+        std::cout<<"Warning : No matches between left and right images"<<std::endl;
+    }
     return matched_vector;
 };
 
