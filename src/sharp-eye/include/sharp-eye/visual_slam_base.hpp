@@ -1,3 +1,4 @@
+#pragma once
 #include <opencv2/highgui.hpp>
 #include <opencv2/features2d.hpp>
 #include <Eigen/Dense>
@@ -34,7 +35,7 @@ class VisualSlamBase{
    };
    struct Camera{
        // Calibrated camera object
-       cv::Mat intrinsics;
+       Eigen::Matrix3d intrinsics;
        std::vector<double> distortion_coeffs;
    } camera_l, camera_r;
 

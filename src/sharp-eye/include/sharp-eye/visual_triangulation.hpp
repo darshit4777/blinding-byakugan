@@ -1,3 +1,4 @@
+#pragma once
 #include <sharp-eye/visual_slam_base.hpp>
 
 

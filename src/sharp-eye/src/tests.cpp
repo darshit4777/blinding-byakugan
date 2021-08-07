@@ -4,6 +4,7 @@
 #include <cv_bridge/cv_bridge.h>
 #include <boost/bind.hpp>
 #include <sharp-eye/visual_triangulation.hpp>
+#include <sharp-eye/visual_tracking.hpp>
 #include <Eigen/Dense>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -233,6 +234,64 @@ class TestGenerate3DCoordinates{
     };
 };
 
+class TestFindCorrespondences{
+    
+    public:
+    Camera cam_left;
+    Camera cam_right;
+    TestFindCorrespondences(){
+        // Initializing Camera Matrices
+        cam_left.intrinsics << 458.654,     0.0,    367.215,
+                               0.0, 457.296,    248.375,
+                               0.0,     0.0,        1.0;
+
+        cam_right.intrinsics << 457.587,        0.0, 379.999,
+                                    0.0,    456.134, 255.238,
+                                    0.05,        0.0,    1.0;                               
+
+        TestMain();
+    };
+
+    void TestMain(){
+        VisualTracking tracking(cam_left,cam_right);
+        VisualTriangulation triangulator;
+        std::vector<VisualSlamBase::KeypointWD> features_l;
+        std::vector<VisualSlamBase::KeypointWD> features_r;
+
+        while(ros::ok()){
+            ros::spinOnce();
+            if(received_l){
+                features_l.clear();
+                features_l = triangulator.DetectAndComputeFeatures(&image_l,features_l,false);
+            }
+            if(received_r){
+                features_r.clear();
+                features_r = triangulator.DetectAndComputeFeatures(&image_r,features_r,false);
+            }
+            if(received_l && received_r){
+                // Get Matches
+                MatchVector matches = triangulator.GetKeypointMatches(features_l,features_r);
+
+                FramepointVector framepoints;
+                triangulator.Generate3DCoordinates(matches,framepoints,0.11,457.95,cam_left.intrinsics);
+                VisualSlamBase::Frame current_frame;
+                current_frame.points = framepoints;
+                tracking.frames.push_back(current_frame);
+                current_frame.points.clear();
+                if(tracking.frames.size() > 1){
+                    // Skip the first frame, from the second frame onwards..
+                    int previous_index = tracking.frames.size() - 2;
+                    int current_index = tracking.frames.size() - 1;
+                    tracking.FindCorrespondences(tracking.frames[previous_index].points,tracking.frames[current_index].points);
+
+                }
+                
+            };
+        };
+        //cv::destroyAllWindows();
+    };  
+};
+
 
 int main(int argc, char **argv){
     ros::init(argc,argv,"image_listener");
@@ -242,6 +301,7 @@ int main(int argc, char **argv){
     image_transport::Subscriber imageSub_r = it.subscribe("cam1/image_raw", 1, boost::bind(CameraCallback,_1,1));
     //TestDetectFeatures test;
     //TestGetMatchedKeypoints test;
-    TestGenerate3DCoordinates test(nh);
+    //TestGenerate3DCoordinates test(nh);
+    TestFindCorrespondences test;
     return 0;
 }

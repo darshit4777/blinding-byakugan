@@ -141,11 +141,15 @@ include_directories(
 add_library(visual_triangulation
   src/visual_triangulation.cpp
 )
+add_library(visual_tracking
+  src/visual_tracking.cpp
+)
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
 add_dependencies(visual_triangulation ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(visual_tracking ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
@@ -175,6 +179,7 @@ target_link_libraries(test_node
   ${catkin_LIBRARIES}
   ${OpenCV_LIBS}
   visual_triangulation
+  visual_tracking
   ${PCL_LIBRARIES}
 )
 
