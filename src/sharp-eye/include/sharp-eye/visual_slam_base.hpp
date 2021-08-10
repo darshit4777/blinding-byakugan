@@ -41,8 +41,10 @@ class VisualSlamBase{
 
    struct Frame{
        cv::Mat image_l, image_r; //< raw image data
-       Eigen::Transform<double,3,2> T_cam2world, T_world2cam; // Eigen 3D affine transform to represent pose
+       Eigen::Transform<double,3,2> T_cam2world, T_world2cam,T_caml2camr; // Eigen 3D affine transform to represent pose
        std::vector<Framepoint> points;  // framepoints owned by the Frame
+       Camera camera_l;
+       Camera camera_r;
    };
 
    struct LocalMap{

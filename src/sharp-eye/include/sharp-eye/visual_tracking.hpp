@@ -8,6 +8,7 @@ typedef std::vector<std::pair<VisualSlamBase::KeypointWD,VisualSlamBase::Keypoin
 typedef VisualSlamBase::Camera Camera;
 
 
+
 class VisualTracking{
     /**
      * @brief Visual Tracking class provides methods to track framepoints through 
@@ -46,5 +47,23 @@ class VisualTracking{
      * @return FramepointVector 
      */
     FramepointVector FindCorrespondences(FramepointVector &previous_frame,FramepointVector &current_frame);
+
+    /**
+     * @brief Calculates and returns the Jacobian matrix of the projection equation. 
+     * The jacobian is of the form D h(exp(x) * T_w2c * cam_coordinates) / dx 
+     * The jacobian thus is that of a projection equation and will be calculated using the chain rule
+     * The first derivative in the chain will be D( h(A) )/ DA - where A = T_w2c * cam_coordinates
+     * The second derivative is of the form D(exp(x) * A)/Dx - which is a standard form.
+     * 
+     * @param frame_ptr 
+     * @param cam_coordinates << Coordinates of the specific framepoint in the camera frame of reference
+     * @param T_w2c << Estimate of the pose of the camera in the world
+     * @return Eigen::Matrix<double,4,6> 
+     */
+    Eigen::Matrix<double,4,6> FindJacobian(Eigen::Vector3d& left_cam_coordinates,Eigen::Vector3d& right_cam_coordinates,Camera& camera_l,Camera& camera_r);
+
+    
+
+    
 
 };

@@ -1,4 +1,5 @@
 #include<sharp-eye/visual_tracking.hpp>
+#include<sophus/se3.hpp>
 
 
 typedef std::vector<VisualSlamBase::KeypointWD> FeatureVector;
@@ -23,6 +24,7 @@ VisualTracking::VisualTracking(Camera &cam_left,Camera &cam_right){
 };
 
 FramepointVector VisualTracking::FindCorrespondences(FramepointVector &previous_frame,FramepointVector &current_frame){
+
     /**
      * @brief Finds the correspondences / matches between the framepoint vector of
      * the previous frame and that of the current frame. 
@@ -137,3 +139,58 @@ FramepointVector VisualTracking::FindCorrespondences(FramepointVector &previous_
 
     return current_frame;
 };
+
+Eigen::Matrix<double,4,6> VisualTracking::FindJacobian(Eigen::Vector3d& left_cam_coordinates,Eigen::Vector3d& right_cam_coordinates,Camera& camera_l,Camera& camera_r){
+    Eigen::Matrix<double,4,6> J;
+
+    Eigen::Matrix<double,2,3> left_projection_derivative, right_projection_derivative;
+    double fx_l,fy_l;
+    double fx_r,fy_r;
+
+    double x_l,y_l,z_l;
+    double x_r,y_r,z_r;
+    x_l = left_cam_coordinates[0];
+    y_l = left_cam_coordinates[1];
+    z_l = left_cam_coordinates[2];
+
+    left_projection_derivative(0,0) = fx_l/z_l;
+    left_projection_derivative(0,1) = 0.0;
+    left_projection_derivative(0,2) = -fx_l*x_l/(z_l*z_l);
+    left_projection_derivative(1,0) = 0.0;
+    left_projection_derivative(1,1) = fy_l/z_l;
+    left_projection_derivative(1,2) = -fy_l*y_l/(z_l*z_l);
+
+    x_r = right_cam_coordinates[0];
+    y_r = right_cam_coordinates[1];
+    z_r = right_cam_coordinates[2];
+
+    right_projection_derivative(0,0) = fx_r/z_r;
+    right_projection_derivative(0,1) = 0.0;
+    right_projection_derivative(0,2) = -fx_r*x_r/(z_r*z_r);
+    right_projection_derivative(1,0) = 0.0;
+    right_projection_derivative(1,1) = fy_r/z_r;
+    right_projection_derivative(1,2) = -fy_r*y_r/(z_r*z_r);
+
+    Eigen::Matrix3d hat_cam_coordinates;
+    Eigen::Matrix3d identity3;
+    identity3.setIdentity();
+
+    hat_cam_coordinates(0,0) = 0.0;
+    hat_cam_coordinates(0,1) = -2*z_l;
+    hat_cam_coordinates(0,2) = -2*y_l;
+    hat_cam_coordinates(1,0) = 2*z_l;
+    hat_cam_coordinates(1,1) = 0.0;
+    hat_cam_coordinates(1,2) = -2*x_l;
+    hat_cam_coordinates(2,0) = -2*y_l;
+    hat_cam_coordinates(2,1) = 2*x_l;
+    hat_cam_coordinates(2,2) = 0.0;
+    Eigen::Matrix<double,3,6> J_Transform;
+    J_Transform.block<3,3>(0,0) = identity3;
+    J_Transform.block<3,3>(0,3) = hat_cam_coordinates;
+
+    J.block<2,6>(0,0) = left_projection_derivative * J_Transform;
+    J.block<2,6>(2,0) = right_projection_derivative * J_Transform;
+
+    return J;
+};
+
