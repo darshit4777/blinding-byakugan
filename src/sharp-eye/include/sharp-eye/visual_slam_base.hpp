@@ -3,6 +3,8 @@
 #include <opencv2/features2d.hpp>
 #include <Eigen/Dense>
 #include <g2o/core/optimizable_graph.h>
+#include <boost/smart_ptr.hpp>
+#include <boost/shared_ptr.hpp>
 class VisualSlamBase{
     /**
      * Base class to define custom data types for Visual SLAM. 
@@ -21,7 +23,9 @@ class VisualSlamBase{
        KeypointWD keypoint_l, keypoint_r;
        Eigen::Vector3d camera_coordinates;
        Eigen::Vector3d world_coordinates;
-       Framepoint *next, *previous;
+       //Framepoint *next, *previous;
+       boost::shared_ptr<Framepoint> next,previous;
+    
        bool inlier;
        Landmark *associated_landmark;
    };

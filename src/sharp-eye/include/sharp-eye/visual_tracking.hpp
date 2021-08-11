@@ -62,6 +62,15 @@ class VisualTracking{
      */
     Eigen::Matrix<double,4,6> FindJacobian(Eigen::Vector3d& left_cam_coordinates,Eigen::Vector3d& right_cam_coordinates,Camera& camera_l,Camera& camera_r);
 
+    /**
+     * @brief Estimates the new pose after a change in motion by solving an optimization problem
+     * between two sets of corresponding 3D points.
+     * 
+     * @param frame_ptr 
+     * @return Eigen::Transform<double,3,2> 
+     */
+    Eigen::Transform<double,3,2> EstimateIncrementalMotion(VisualSlamBase::Frame* frame_ptr);
+
     
 
     

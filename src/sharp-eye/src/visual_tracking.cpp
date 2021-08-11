@@ -1,6 +1,7 @@
 #include<sharp-eye/visual_tracking.hpp>
 #include<sophus/se3.hpp>
-
+#include<opencv2/calib3d/calib3d.hpp>
+#include<g2o/solvers/eigen/linear_solver_eigen.h>
 
 typedef std::vector<VisualSlamBase::KeypointWD> FeatureVector;
 typedef std::vector<VisualSlamBase::Framepoint> FramepointVector;
@@ -133,8 +134,8 @@ FramepointVector VisualTracking::FindCorrespondences(FramepointVector &previous_
         // previous frame and vice versa.
         
         // Assigning to each others previous and next
-        query_framepoint.next = &current_frame[good_matches[0].trainIdx];
-        current_frame[good_matches[0].trainIdx].previous = &query_framepoint;
+        query_framepoint.next = boost::make_shared<VisualSlamBase::Framepoint>( current_frame[good_matches[0].trainIdx]);
+        current_frame[good_matches[0].trainIdx].previous = boost::make_shared<VisualSlamBase::Framepoint>(query_framepoint);
     };
 
     return current_frame;
@@ -192,5 +193,148 @@ Eigen::Matrix<double,4,6> VisualTracking::FindJacobian(Eigen::Vector3d& left_cam
     J.block<2,6>(2,0) = right_projection_derivative * J_Transform;
 
     return J;
+};
+
+Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSlamBase::Frame* frame_ptr){
+    // Configuring the Optimization Problem
+    const bool ignore_outliers = true;
+    const double kernel_maximum_error = 20;
+    const double close_depth = 3.5;
+    const double maximum_depth = 5.0;
+    const int number_of_iterations = 20;
+
+    for (int i = 0; i < number_of_iterations; i++) {
+        //Initialize least squares components
+        
+        Eigen::Matrix<double,6,6> H; //< Hessian
+        
+        Eigen::VectorXd b;
+        b.resize(6);
+
+        Eigen::Matrix4d omega; //< Information matrix 
+        omega.setIdentity();
+
+        //loop over all framepoints
+        for (VisualSlamBase::Framepoint& fp : frame_ptr->points){
+
+            if (fp.previous == NULL){
+                continue;
+            };
+
+            // Transforming the corresponding points from the previous frame to current
+            // frame camera coordinates
+            Eigen::Vector3d p_caml = frame_ptr->T_world2cam*fp.previous->world_coordinates;
+            Eigen::Vector3d p_camr = frame_ptr->T_caml2camr.inverse()*p_caml;
+            
+            // TODO : Use landmark position estimates
+            //preferably use landmark position estimate
+            //if (fp->landmark()) {
+            //p_c = T_w2c*fp->landmark()->p_w;
+            ////increase weight for landmarks
+            //omega = ..;
+            //}
+
+            // Now we project the points from the previous frame into pixel coordinates
+            Eigen::Vector3d lcam_pixels,rcam_pixels;
+            lcam_pixels = frame_ptr->camera_l.intrinsics * p_caml;
+            lcam_pixels[0] = lcam_pixels[0]/lcam_pixels[2];
+            lcam_pixels[1] = lcam_pixels[1]/lcam_pixels[2];
+
+            rcam_pixels = frame_ptr->camera_r.intrinsics * frame_ptr->T_caml2camr.inverse() * p_camr;
+            rcam_pixels[0] = lcam_pixels[0]/lcam_pixels[2];
+            rcam_pixels[1] = lcam_pixels[1]/lcam_pixels[2];
+
+            // Calculating Reprojection Error
+            Eigen::Vector4d reproj_error;
+            reproj_error[0] = fp.keypoint_l.keypoint.pt.x - lcam_pixels[0];
+            reproj_error[1] = fp.keypoint_l.keypoint.pt.y - lcam_pixels[1];
+
+            reproj_error[2] = fp.keypoint_r.keypoint.pt.x - rcam_pixels[0];
+            reproj_error[3] = fp.keypoint_r.keypoint.pt.y - rcam_pixels[1];
+
+            const double error_squared = reproj_error.transpose()*reproj_error;
+
+            // Robustify the Kernel
+            if(error_squared > kernel_maximum_error){
+                if(ignore_outliers){
+                    continue;
+                }
+                else{
+                    omega = omega * kernel_maximum_error/error_squared;
+                }
+            }
+            else{
+                fp.inlier = true;
+            };
+            
+            // Calculate the jacobian
+            Eigen::Matrix<double,4,6> J = FindJacobian(p_caml,p_camr,frame_ptr->camera_l,frame_ptr->camera_r);
+
+            // Adjusting for points that are too close or too far
+            if(p_caml[2] < close_depth ){
+                // Too close
+                omega = omega * (close_depth - p_caml[2])/close_depth;
+            }
+            else{
+                omega = omega * (maximum_depth - p_caml[2])/maximum_depth;
+                //disable contribution to translational error
+                //WHY!!?
+                Eigen::Matrix3d zeros;
+                zeros.setZero();
+                J.block<3,3>(0,0) = zeros;
+            };
+
+            //update H and b
+            H += J.transpose()*omega*J;
+            b += J.transpose()*omega*reproj_error;
+
+        }
+        //compute (Identity-damped) solution
+        Eigen::VectorXd dx;
+        g2o::LinearSolverEigen<Eigen::Matrix<double,6,6>> solver;
+        
+        Eigen::MatrixXd identity6;
+        identity6.resize(6,6);
+        identity6.setIdentity();
+
+        H = H + identity6;
+        dx = H.ldlt().solve(-b);
+
+        // dx ends up being a vector with the translation variables and the rotation angles
+        // The rotation angles are most probably rodrigues angles
+        
+        Eigen::Transform<double,3,2> dT;
+        dT.translation().x() = dx[0];
+        dT.translation().y() = dx[1];
+        dT.translation().z() = dx[2];
+        
+        // The angles are in the form of rodrigues angels 
+        std::vector<double> rvec;
+        rvec.push_back(dx[3]);
+        rvec.push_back(dx[4]);
+        rvec.push_back(dx[5]);
+        cv::Mat rotation_matrix;
+        Eigen::Matrix3d eigen_rot_matrix;
+        cv::Rodrigues(rvec,rotation_matrix);
+
+        // Now converting the rotation matrix to Eigen Matrix
+        eigen_rot_matrix(0,0) = rotation_matrix.at<double>(0,0);
+        eigen_rot_matrix(0,1) = rotation_matrix.at<double>(0,1);
+        eigen_rot_matrix(0,2) = rotation_matrix.at<double>(0,2);
+        eigen_rot_matrix(1,0) = rotation_matrix.at<double>(1,0);
+        eigen_rot_matrix(1,1) = rotation_matrix.at<double>(1,1);
+        eigen_rot_matrix(1,2) = rotation_matrix.at<double>(1,2);
+        eigen_rot_matrix(2,0) = rotation_matrix.at<double>(2,0);
+        eigen_rot_matrix(2,1) = rotation_matrix.at<double>(2,1);
+        eigen_rot_matrix(2,2) = rotation_matrix.at<double>(2,2);
+
+        // Simplest way to assign a 3D rotation matrix
+        dT.matrix().block<3,3>(0,0) = eigen_rot_matrix;
+
+        frame_ptr->T_world2cam = dT*frame_ptr->T_world2cam;
+        frame_ptr->T_cam2world = frame_ptr->T_world2cam.inverse();
+    }
+
+    return frame_ptr->T_cam2world;
 };
 
