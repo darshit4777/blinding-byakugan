@@ -8,6 +8,7 @@ typedef std::vector<VisualSlamBase::Framepoint> FramepointVector;
 typedef std::vector<VisualSlamBase::Frame> FrameVector;
 typedef std::vector<std::pair<VisualSlamBase::KeypointWD,VisualSlamBase::KeypointWD>> MatchVector;
 typedef VisualSlamBase::Camera Camera;
+typedef std::chrono::high_resolution_clock _Clock; 
 
 VisualTracking::VisualTracking(Camera &cam_left,Camera &cam_right){
 
@@ -20,6 +21,9 @@ VisualTracking::VisualTracking(Camera &cam_left,Camera &cam_right){
     frames.clear();
     
     matcher = cv::FlannBasedMatcher(new cv::flann::LshIndexParams(20, 10, 2));
+
+    // Initializing the pose derivative for motion prediction
+    pose_derivative.clock_set = false;
 
     std::cout<<"Visual Tracking Initialized"<<std::endl;  
 };
@@ -338,3 +342,67 @@ Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSla
     return frame_ptr->T_cam2world;
 };
 
+VisualTracking::TimeDerivative VisualTracking::CalculateMotionJacobian(VisualSlamBase::Frame* current_frame_ptr,VisualSlamBase::Frame* previous_frame_ptr){
+    /**
+     * @brief Time differentials on SE3 are calculated as deltaT = T1.inverse() * T2
+     * 
+     */
+    if(!this->pose_derivative.clock_set){
+        // This is the first time the derivative is being calculated.
+        // This means the pose T2 has not been set yet.
+        pose_derivative.deltaT.setIdentity();
+        pose_derivative.previous_call_time = std::chrono::high_resolution_clock::now();
+        pose_derivative.clock_set = true;
+
+        return pose_derivative;
+    }
+    else{
+        Eigen::Transform<double,3,2> T2,T1;
+        T1 = previous_frame_ptr->T_world2cam;
+        T2 = current_frame_ptr->T_world2cam;
+        pose_derivative.deltaT = T1.inverse() * T2;
+        auto current_time = std::chrono::high_resolution_clock::now();
+        pose_derivative.time_elapsed = std::chrono::duration<double, std::milli>(current_time - pose_derivative.previous_call_time).count();
+        pose_derivative.previous_call_time = std::chrono::high_resolution_clock::now();
+        pose_derivative.clock_set = true;
+
+        return pose_derivative;
+    };
+};
+
+
+Eigen::Transform<double,3,2> VisualTracking::CalculatePosePrediction(VisualSlamBase::Frame* frame_ptr, VisualTracking::TimeDerivative time_derivative){
+    /**
+     * @brief The method of performing pose prediction on SE3 involves a small hack
+     * Tpredicted = T1 + deltaT;
+     * deltaT = DT/dt * t
+     * 
+     * On SE3 multiplication with time translates to raising a matrix to a power 
+     * In this implementation we try to find the closes whole number we can raise 
+     * the matrix to and for loop it.
+     */
+    auto current_time = std::chrono::high_resolution_clock::now();
+    Eigen::Transform<double,3,2> T_predicted;
+
+    if(!pose_prediction_time_set){
+        pose_prediction_time_set = true;
+        pose_prediction_time = current_time;
+        T_predicted.setIdentity();
+        return T_predicted;
+    }
+    else{
+        double time_elapsed = std::chrono::duration<double, std::milli>(current_time - pose_prediction_time).count();
+        int iterations = time_elapsed/time_derivative.time_elapsed;
+        if (iterations < 1){
+            iterations = 1;
+        }
+
+        for(int i = 0; i < iterations; i++){
+            frame_ptr->T_world2cam = time_derivative.deltaT * frame_ptr->T_world2cam;
+        }
+        pose_prediction_time_set = true;
+        pose_prediction_time = current_time;
+        return frame_ptr->T_world2cam;
+    }
+
+}

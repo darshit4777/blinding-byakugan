@@ -1,11 +1,13 @@
 #pragma once
 #include <sharp-eye/visual_slam_base.hpp>
+#include <chrono/chrono.hpp>
 
 typedef std::vector<VisualSlamBase::KeypointWD> FeatureVector;
 typedef std::vector<VisualSlamBase::Framepoint> FramepointVector;
 typedef std::vector<VisualSlamBase::Frame> FrameVector;
 typedef std::vector<std::pair<VisualSlamBase::KeypointWD,VisualSlamBase::KeypointWD>> MatchVector;
 typedef VisualSlamBase::Camera Camera;
+typedef std::chrono::high_resolution_clock _Clock; 
 
 
 
@@ -23,14 +25,23 @@ class VisualTracking{
     FrameVector frames;
     Camera camera_left;
     Camera camera_right;
-
+    
     // Image Size
     int img_height;
     int img_width;
 
     // Descriptor Matcher
     cv::FlannBasedMatcher matcher;
+
+    struct TimeDerivative{
+        Eigen::Transform<double,3,2> deltaT;
+        _Clock previous_call_time;
+        double time_elapsed;
+        bool clock_set;
+    } pose_derivative;
     
+    _Clock pose_prediction_time;
+    bool pose_prediction_time_set;
     /**
      * @brief Construct a new Visual Tracking object
      * Takes the camera specifics as arguments
@@ -71,8 +82,24 @@ class VisualTracking{
      */
     Eigen::Transform<double,3,2> EstimateIncrementalMotion(VisualSlamBase::Frame* frame_ptr);
 
-    
+    /**
+     * @brief Calculates the jacobian of the motion wrt time.
+     * Is used in the motion model to predict the next pose
+     * 
+     * @param current_frame_ptr 
+     * @param previous_frame_ptr
+     * @return TimeDerivative 
+     */
+    TimeDerivative CalculateMotionJacobian(VisualSlamBase::Frame* current_frame_ptr,VisualSlamBase::Frame* previous_frame_ptr);
 
-    
+    /**
+     * @brief Calculates the predicted pose using a constant 
+     * velocity motion model
+     * 
+     * @param frame_ptr 
+     * @param time_derivative 
+     * @return Eigen::Transform<double,3,2> 
+     */
+    Eigen::Transform<double,3,2> CalculatePosePrediction(VisualSlamBase::Frame* frame_ptr, TimeDerivative time_derivative);
 
 };
