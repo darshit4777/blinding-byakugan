@@ -22,10 +22,14 @@ class VisualTracking{
     public:
     
     // Vector to store frames
-    FrameVector frames;
+    VisualSlamBase::WorldMap map;
     Camera camera_left;
     Camera camera_right;
-    
+
+    // Imaages
+    cv::Mat img_l;
+    cv::Mat img_r;
+
     // Image Size
     int img_height;
     int img_width;
@@ -33,10 +37,17 @@ class VisualTracking{
     // Descriptor Matcher
     cv::FlannBasedMatcher matcher;
 
+    // Framepoint Vector
+    FramepointVector framepoint_vec;
+
+    // Left and Right Camera transform
+    Eigen::Transform<double,3,2> T_caml2camr;
+
     struct ManifoldDerivative{
         Eigen::Transform<double,3,2> deltaT;
         _Time prediction_call;
-        _Time differential_call;
+        _Time previous_prediction_call;
+        _Time previous_differential_call;
         double differential_interval;
         double prediction_interval;
         bool clock_set;
@@ -56,9 +67,9 @@ class VisualTracking{
      * 
      * @param previous_frame 
      * @param current_frame 
-     * @return FramepointVector 
+     * @return int << returns the number of correspondences 
      */
-    FramepointVector FindCorrespondences(FramepointVector &previous_frame,FramepointVector &current_frame);
+    int FindCorrespondences(FramepointVector &previous_frame,FramepointVector &current_frame);
 
     /**
      * @brief Calculates and returns the Jacobian matrix of the projection equation. 
@@ -103,7 +114,6 @@ class VisualTracking{
      */
     Eigen::Transform<double,3,2> CalculatePosePrediction(VisualSlamBase::Frame* frame_ptr);
 
-    private:
     /**
      * @brief Sets the Prediction Call Time 
      * 
@@ -112,13 +122,14 @@ class VisualTracking{
     void SetPredictionCallTime();
 
     /**
-     * @brief Sets the Differential Call Time 
+     * @brief Initializes a new Frame or a new Local Map based on the availability of 
+     * previous correspondences or pose derivatives
      * 
-     * @param time_derivative_ptr 
      */
-    void SetDifferentialCallTime();
-
-    
+    void InitializeNode();
+    private:
     void InitializeStateJacobian();
+
+    void InitializeWorldMap();
 
 };
