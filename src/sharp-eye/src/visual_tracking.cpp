@@ -1,7 +1,6 @@
 #include<sharp-eye/visual_tracking.hpp>
 #include<sophus/se3.hpp>
 #include<opencv2/calib3d/calib3d.hpp>
-#include<g2o/solvers/eigen/linear_solver_eigen.h>
 
 typedef std::vector<VisualSlamBase::KeypointWD> FeatureVector;
 typedef std::vector<VisualSlamBase::Framepoint> FramepointVector;
@@ -9,6 +8,7 @@ typedef std::vector<VisualSlamBase::Frame> FrameVector;
 typedef std::vector<std::pair<VisualSlamBase::KeypointWD,VisualSlamBase::KeypointWD>> MatchVector;
 typedef VisualSlamBase::Camera Camera;
 typedef std::chrono::high_resolution_clock _Clock; 
+typedef std::chrono::_V2::high_resolution_clock::time_point _Time;
 
 VisualTracking::VisualTracking(Camera &cam_left,Camera &cam_right){
 
@@ -195,11 +195,12 @@ Eigen::Matrix<double,4,6> VisualTracking::FindJacobian(Eigen::Vector3d& left_cam
 
     J.block<2,6>(0,0) = left_projection_derivative * J_Transform;
     J.block<2,6>(2,0) = right_projection_derivative * J_Transform;
-
+    std::cout<<J_Transform<<std::endl;
+    std::cout<<J<<std::endl;
     return J;
 };
 
-Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSlamBase::Frame* frame_ptr){
+Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSlamBase::Frame &frame_ptr){
     // Configuring the Optimization Problem
     const bool ignore_outliers = true;
     const double kernel_maximum_error = 20;
@@ -219,7 +220,7 @@ Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSla
         omega.setIdentity();
 
         //loop over all framepoints
-        for (VisualSlamBase::Framepoint& fp : frame_ptr->points){
+        for (VisualSlamBase::Framepoint& fp : frame_ptr.points){
 
             if (fp.previous == NULL){
                 continue;
@@ -227,8 +228,15 @@ Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSla
 
             // Transforming the corresponding points from the previous frame to current
             // frame camera coordinates
-            Eigen::Vector3d p_caml = frame_ptr->T_world2cam*fp.previous->world_coordinates;
-            Eigen::Vector3d p_camr = frame_ptr->T_caml2camr.inverse()*p_caml;
+            std::cout<<fp.previous->world_coordinates<<std::endl;
+            std::cout<<frame_ptr.T_world2cam.matrix()<<std::endl;
+            Eigen::Vector3d p_caml = frame_ptr.T_world2cam*fp.previous->world_coordinates;
+            Eigen::Vector3d p_camr = frame_ptr.T_caml2camr.inverse()*p_caml;
+
+            std::cout<<"pcaml "<<p_caml<<std::endl;
+            std::cout<<"pcamr "<<p_camr<<std::endl;
+            std::cout<<"left cam "<<frame_ptr.camera_l.intrinsics<<std::endl;
+            std::cout<<"right cam "<<frame_ptr.camera_r.intrinsics<<std::endl;
             
             // TODO : Use landmark position estimates
             //preferably use landmark position estimate
@@ -240,11 +248,11 @@ Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSla
 
             // Now we project the points from the previous frame into pixel coordinates
             Eigen::Vector3d lcam_pixels,rcam_pixels;
-            lcam_pixels = frame_ptr->camera_l.intrinsics * p_caml;
+            lcam_pixels = frame_ptr.camera_l.intrinsics * p_caml;
             lcam_pixels[0] = lcam_pixels[0]/lcam_pixels[2];
             lcam_pixels[1] = lcam_pixels[1]/lcam_pixels[2];
 
-            rcam_pixels = frame_ptr->camera_r.intrinsics * frame_ptr->T_caml2camr.inverse() * p_camr;
+            rcam_pixels = frame_ptr.camera_r.intrinsics * frame_ptr.T_caml2camr.inverse() * p_camr;
             rcam_pixels[0] = lcam_pixels[0]/lcam_pixels[2];
             rcam_pixels[1] = lcam_pixels[1]/lcam_pixels[2];
 
@@ -272,8 +280,9 @@ Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSla
             };
             
             // Calculate the jacobian
-            Eigen::Matrix<double,4,6> J = FindJacobian(p_caml,p_camr,frame_ptr->camera_l,frame_ptr->camera_r);
 
+            Eigen::Matrix<double,4,6> J = FindJacobian(p_caml,p_camr,frame_ptr.camera_l,frame_ptr.camera_r);
+            std::cout<<J<<std::endl;
             // Adjusting for points that are too close or too far
             if(p_caml[2] < close_depth ){
                 // Too close
@@ -295,8 +304,6 @@ Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSla
         }
         //compute (Identity-damped) solution
         Eigen::VectorXd dx;
-        g2o::LinearSolverEigen<Eigen::Matrix<double,6,6>> solver;
-        
         Eigen::MatrixXd identity6;
         identity6.resize(6,6);
         identity6.setIdentity();
@@ -335,11 +342,11 @@ Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSla
         // Simplest way to assign a 3D rotation matrix
         dT.matrix().block<3,3>(0,0) = eigen_rot_matrix;
 
-        frame_ptr->T_world2cam = dT*frame_ptr->T_world2cam;
-        frame_ptr->T_cam2world = frame_ptr->T_world2cam.inverse();
+        frame_ptr.T_world2cam = dT*frame_ptr.T_world2cam;
+        frame_ptr.T_cam2world = frame_ptr.T_world2cam.inverse();
     }
 
-    return frame_ptr->T_cam2world;
+    return frame_ptr.T_cam2world;
 };
 
 VisualTracking::TimeDerivative VisualTracking::CalculateMotionJacobian(VisualSlamBase::Frame* current_frame_ptr,VisualSlamBase::Frame* previous_frame_ptr){
@@ -347,27 +354,21 @@ VisualTracking::TimeDerivative VisualTracking::CalculateMotionJacobian(VisualSla
      * @brief Time differentials on SE3 are calculated as deltaT = T1.inverse() * T2
      * 
      */
-    if(!this->pose_derivative.clock_set){
-        // This is the first time the derivative is being calculated.
-        // This means the pose T2 has not been set yet.
-        pose_derivative.deltaT.setIdentity();
-        pose_derivative.previous_call_time = std::chrono::high_resolution_clock::now();
-        pose_derivative.clock_set = true;
 
-        return pose_derivative;
+    Eigen::Transform<double,3,2> T2,T1;
+    T1 = previous_frame_ptr->T_world2cam;
+    T2 = current_frame_ptr->T_world2cam;
+    pose_derivative.deltaT = T1.inverse() * T2;
+    auto current_time = std::chrono::high_resolution_clock::now();
+    if(pose_derivative.clock_set){
+        pose_derivative.differential_interval = std::chrono::duration<double, std::milli>(current_time - pose_derivative.differential_call).count();
     }
     else{
-        Eigen::Transform<double,3,2> T2,T1;
-        T1 = previous_frame_ptr->T_world2cam;
-        T2 = current_frame_ptr->T_world2cam;
-        pose_derivative.deltaT = T1.inverse() * T2;
-        auto current_time = std::chrono::high_resolution_clock::now();
-        pose_derivative.time_elapsed = std::chrono::duration<double, std::milli>(current_time - pose_derivative.previous_call_time).count();
-        pose_derivative.previous_call_time = std::chrono::high_resolution_clock::now();
-        pose_derivative.clock_set = true;
-
-        return pose_derivative;
+        std::cout<<"Warning: Debug : The differential time delta was not set, this may cause pose predictions to fail"<<std::endl;
     };
+    pose_derivative.clock_set = false;
+    return pose_derivative;
+
 };
 
 
@@ -384,25 +385,36 @@ Eigen::Transform<double,3,2> VisualTracking::CalculatePosePrediction(VisualSlamB
     auto current_time = std::chrono::high_resolution_clock::now();
     Eigen::Transform<double,3,2> T_predicted;
 
-    if(!pose_prediction_time_set){
-        pose_prediction_time_set = true;
-        pose_prediction_time = current_time;
-        T_predicted.setIdentity();
-        return T_predicted;
+    double time_elapsed = std::chrono::duration<double, std::milli>(current_time - time_derivative.prediction_call).count();
+    int iterations;
+    if(time_derivative.differential_interval == 0){
+        iterations = 1;
     }
     else{
-        double time_elapsed = std::chrono::duration<double, std::milli>(current_time - pose_prediction_time).count();
-        int iterations = time_elapsed/time_derivative.time_elapsed;
-        if (iterations < 1){
-            iterations = 1;
-        }
-
-        for(int i = 0; i < iterations; i++){
-            frame_ptr->T_world2cam = time_derivative.deltaT * frame_ptr->T_world2cam;
-        }
-        pose_prediction_time_set = true;
-        pose_prediction_time = current_time;
-        return frame_ptr->T_world2cam;
+        iterations = std::max(int(time_elapsed/time_derivative.differential_interval),1);
     }
 
-}
+    // Apply the transform
+    for(int i = 0; i < iterations; i++){
+        frame_ptr->T_world2cam = time_derivative.deltaT * frame_ptr->T_world2cam;
+    }
+
+    return frame_ptr->T_world2cam;
+};
+
+void VisualTracking::SetPredictionCallTime(TimeDerivative* time_derivative_ptr){
+    auto current_time = std::chrono::_V2::high_resolution_clock::now();
+
+    time_derivative_ptr->prediction_call = current_time;
+    return;
+};
+
+void VisualTracking::SetDifferentialCallTime(TimeDerivative* time_derivative_ptr){
+    
+    // TODO - This is a bad way of doing things because it implies that this function 
+    // cannot be called before a prediction time function has been called.
+    time_derivative_ptr->differential_call = time_derivative_ptr->prediction_call;
+    return;
+};
+
+    

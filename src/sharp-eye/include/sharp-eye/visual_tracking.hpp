@@ -1,13 +1,13 @@
 #pragma once
 #include <sharp-eye/visual_slam_base.hpp>
-#include <chrono/chrono.hpp>
-
+#include <chrono>
 typedef std::vector<VisualSlamBase::KeypointWD> FeatureVector;
 typedef std::vector<VisualSlamBase::Framepoint> FramepointVector;
 typedef std::vector<VisualSlamBase::Frame> FrameVector;
 typedef std::vector<std::pair<VisualSlamBase::KeypointWD,VisualSlamBase::KeypointWD>> MatchVector;
 typedef VisualSlamBase::Camera Camera;
 typedef std::chrono::high_resolution_clock _Clock; 
+typedef std::chrono::_V2::high_resolution_clock::time_point _Time;
 
 
 
@@ -35,13 +35,13 @@ class VisualTracking{
 
     struct TimeDerivative{
         Eigen::Transform<double,3,2> deltaT;
-        _Clock previous_call_time;
-        double time_elapsed;
+        _Time prediction_call;
+        _Time differential_call;
+        double differential_interval;
+        double prediction_interval;
         bool clock_set;
     } pose_derivative;
     
-    _Clock pose_prediction_time;
-    bool pose_prediction_time_set;
     /**
      * @brief Construct a new Visual Tracking object
      * Takes the camera specifics as arguments
@@ -80,7 +80,7 @@ class VisualTracking{
      * @param frame_ptr 
      * @return Eigen::Transform<double,3,2> 
      */
-    Eigen::Transform<double,3,2> EstimateIncrementalMotion(VisualSlamBase::Frame* frame_ptr);
+    Eigen::Transform<double,3,2> EstimateIncrementalMotion(VisualSlamBase::Frame &frame_ptr);
 
     /**
      * @brief Calculates the jacobian of the motion wrt time.
@@ -101,5 +101,19 @@ class VisualTracking{
      * @return Eigen::Transform<double,3,2> 
      */
     Eigen::Transform<double,3,2> CalculatePosePrediction(VisualSlamBase::Frame* frame_ptr, TimeDerivative time_derivative);
+
+    /**
+     * @brief Sets the Prediction Call Time 
+     * 
+     * @param time_derivative_ptr 
+     */
+    void SetPredictionCallTime(TimeDerivative* time_derivative_ptr);
+
+    /**
+     * @brief Sets the Differential Call Time 
+     * 
+     * @param time_derivative_ptr 
+     */
+    void SetDifferentialCallTime(TimeDerivative* time_derivative_ptr);
 
 };

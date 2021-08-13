@@ -298,6 +298,15 @@ class TestFindJacobian{
     Eigen::Transform<double,3,2> T_body2caml;
     Eigen::Transform<double,3,2> T_body2camr;
     Eigen::Transform<double,3,2> T_caml2camr;
+
+    VisualTriangulation triangulator;
+    VisualTracking* tracking;
+    std::vector<VisualSlamBase::KeypointWD> features_l;
+    std::vector<VisualSlamBase::KeypointWD> features_r;
+
+    FramepointVector framepoints;
+    MatchVector matches;
+    
     TestFindJacobian(){
         // Initializing Camera Matrices
         cam_left.intrinsics << 458.654,     0.0,    367.215,
@@ -320,12 +329,82 @@ class TestFindJacobian{
 
         T_caml2camr = T_body2caml.inverse() * T_body2camr;
 
-        std::cout<<T_caml2camr.translation()<<std::endl;
-        std::cout<<T_caml2camr.rotation()<<std::endl;
+        tracking = new VisualTracking(cam_left,cam_right);
+        TestMain();
+        return;
+    };
 
+    void TestMain(){
+
+        while(ros::ok()){
+            ros::spinOnce();
+            if(received_l && received_r){
+                // Set the time for recieving a new frame
+                tracking->SetPredictionCallTime(&tracking->pose_derivative);
+                DetectFeatures();
+
+                Calculate3DCoordinates();
+                
+                
+                GenerateFeatureCorrespndences();
+                if(tracking->frames.size() > 1){
+                    int current_frame_index = tracking->frames.size() - 1;
+                    int previous_frame_index = current_frame_index - 1;
+
+                    tracking->CalculatePosePrediction(&tracking->frames[current_frame_index],tracking->pose_derivative);
+                    tracking->SetDifferentialCallTime(&tracking->pose_derivative);
+                    VisualSlamBase::Frame* frame_ptr = &tracking->frames[current_frame_index];
+                    tracking->EstimateIncrementalMotion(*frame_ptr);    
+                }
+                
+                
+            };
+        };
+    };
+
+    void DetectFeatures(){
+        if(received_l){
+                features_l.clear();
+                features_l = triangulator.DetectAndComputeFeatures(&image_l,features_l,false);
+            }
+        if(received_r){
+            features_r.clear();
+            features_r = triangulator.DetectAndComputeFeatures(&image_r,features_r,false);
+        }
 
         return;
     };
+
+    void Calculate3DCoordinates(){
+        // Get Matches
+            matches = triangulator.GetKeypointMatches(features_l,features_r);
+            // TODO : Put parametized arguments for baseline and fx
+            triangulator.Generate3DCoordinates(matches,framepoints,0.110074,457.95,cam_left.intrinsics);
+            return;
+    };
+
+    void GenerateFeatureCorrespndences(){
+        VisualSlamBase::Frame current_frame;
+        current_frame.points = framepoints;
+        current_frame.camera_l = cam_left;
+        current_frame.camera_r = cam_right;
+        if(tracking->frames.empty()){
+            // This is the first frame
+            current_frame.T_world2cam.setIdentity();
+            for(VisualSlamBase::Framepoint& framepoint : current_frame.points){
+                framepoint.world_coordinates = framepoint.camera_coordinates;
+            }
+        }
+        tracking->frames.push_back(current_frame);
+        // Skip the first frame, from the second frame onwards..
+        if(tracking->frames.size() > 1){
+            int previous_index = tracking->frames.size() - 2;
+            int current_index = tracking->frames.size() - 1;
+            tracking->FindCorrespondences(tracking->frames[previous_index].points,tracking->frames[current_index].points);
+        };
+        return;
+    };
+
 };
 
 
