@@ -33,14 +33,15 @@ class VisualTracking{
     // Descriptor Matcher
     cv::FlannBasedMatcher matcher;
 
-    struct TimeDerivative{
+    struct ManifoldDerivative{
         Eigen::Transform<double,3,2> deltaT;
         _Time prediction_call;
         _Time differential_call;
         double differential_interval;
         double prediction_interval;
         bool clock_set;
-    } pose_derivative;
+        bool deltaT_set;
+    } state_jacobian;
     
     /**
      * @brief Construct a new Visual Tracking object
@@ -90,7 +91,7 @@ class VisualTracking{
      * @param previous_frame_ptr
      * @return TimeDerivative 
      */
-    TimeDerivative CalculateMotionJacobian(VisualSlamBase::Frame* current_frame_ptr,VisualSlamBase::Frame* previous_frame_ptr);
+    ManifoldDerivative CalculateMotionJacobian(VisualSlamBase::Frame* current_frame_ptr,VisualSlamBase::Frame* previous_frame_ptr);
 
     /**
      * @brief Calculates the predicted pose using a constant 
@@ -100,20 +101,24 @@ class VisualTracking{
      * @param time_derivative 
      * @return Eigen::Transform<double,3,2> 
      */
-    Eigen::Transform<double,3,2> CalculatePosePrediction(VisualSlamBase::Frame* frame_ptr, TimeDerivative time_derivative);
+    Eigen::Transform<double,3,2> CalculatePosePrediction(VisualSlamBase::Frame* frame_ptr);
 
+    private:
     /**
      * @brief Sets the Prediction Call Time 
      * 
      * @param time_derivative_ptr 
      */
-    void SetPredictionCallTime(TimeDerivative* time_derivative_ptr);
+    void SetPredictionCallTime();
 
     /**
      * @brief Sets the Differential Call Time 
      * 
      * @param time_derivative_ptr 
      */
-    void SetDifferentialCallTime(TimeDerivative* time_derivative_ptr);
+    void SetDifferentialCallTime();
+
+    
+    void InitializeStateJacobian();
 
 };

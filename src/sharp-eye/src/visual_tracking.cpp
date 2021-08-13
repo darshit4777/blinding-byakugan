@@ -23,7 +23,7 @@ VisualTracking::VisualTracking(Camera &cam_left,Camera &cam_right){
     matcher = cv::FlannBasedMatcher(new cv::flann::LshIndexParams(20, 10, 2));
 
     // Initializing the pose derivative for motion prediction
-    pose_derivative.clock_set = false;
+    
 
     std::cout<<"Visual Tracking Initialized"<<std::endl;  
 };
@@ -349,7 +349,7 @@ Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSla
     return frame_ptr.T_cam2world;
 };
 
-VisualTracking::TimeDerivative VisualTracking::CalculateMotionJacobian(VisualSlamBase::Frame* current_frame_ptr,VisualSlamBase::Frame* previous_frame_ptr){
+VisualTracking::ManifoldDerivative VisualTracking::CalculateMotionJacobian(VisualSlamBase::Frame* current_frame_ptr,VisualSlamBase::Frame* previous_frame_ptr){
     /**
      * @brief Time differentials on SE3 are calculated as deltaT = T1.inverse() * T2
      * 
@@ -358,21 +358,21 @@ VisualTracking::TimeDerivative VisualTracking::CalculateMotionJacobian(VisualSla
     Eigen::Transform<double,3,2> T2,T1;
     T1 = previous_frame_ptr->T_world2cam;
     T2 = current_frame_ptr->T_world2cam;
-    pose_derivative.deltaT = T1.inverse() * T2;
+    state_jacobian.deltaT = T1.inverse() * T2;
     auto current_time = std::chrono::high_resolution_clock::now();
-    if(pose_derivative.clock_set){
-        pose_derivative.differential_interval = std::chrono::duration<double, std::milli>(current_time - pose_derivative.differential_call).count();
+    if(state_jacobian.clock_set){
+        state_jacobian.differential_interval = std::chrono::duration<double, std::milli>(current_time - state_jacobian.differential_call).count();
     }
     else{
         std::cout<<"Warning: Debug : The differential time delta was not set, this may cause pose predictions to fail"<<std::endl;
     };
-    pose_derivative.clock_set = false;
-    return pose_derivative;
+    state_jacobian.clock_set = false;
+    return state_jacobian;
 
 };
 
 
-Eigen::Transform<double,3,2> VisualTracking::CalculatePosePrediction(VisualSlamBase::Frame* frame_ptr, VisualTracking::TimeDerivative time_derivative){
+Eigen::Transform<double,3,2> VisualTracking::CalculatePosePrediction(VisualSlamBase::Frame* frame_ptr){
     /**
      * @brief The method of performing pose prediction on SE3 involves a small hack
      * Tpredicted = T1 + deltaT;
@@ -385,36 +385,45 @@ Eigen::Transform<double,3,2> VisualTracking::CalculatePosePrediction(VisualSlamB
     auto current_time = std::chrono::high_resolution_clock::now();
     Eigen::Transform<double,3,2> T_predicted;
 
-    double time_elapsed = std::chrono::duration<double, std::milli>(current_time - time_derivative.prediction_call).count();
+    double time_elapsed = std::chrono::duration<double, std::milli>(current_time - state_jacobian.prediction_call).count();
     int iterations;
-    if(time_derivative.differential_interval == 0){
+    if(state_jacobian.differential_interval == 0){
         iterations = 1;
     }
     else{
-        iterations = std::max(int(time_elapsed/time_derivative.differential_interval),1);
+        iterations = std::max(int(time_elapsed/state_jacobian.differential_interval),1);
     }
 
     // Apply the transform
     for(int i = 0; i < iterations; i++){
-        frame_ptr->T_world2cam = time_derivative.deltaT * frame_ptr->T_world2cam;
+        frame_ptr->T_world2cam = state_jacobian.deltaT * frame_ptr->T_world2cam;
     }
 
     return frame_ptr->T_world2cam;
 };
 
-void VisualTracking::SetPredictionCallTime(TimeDerivative* time_derivative_ptr){
+void VisualTracking::SetPredictionCallTime(){
+    //TODO : Maybe these functions should be a part of the struct itself.
     auto current_time = std::chrono::_V2::high_resolution_clock::now();
 
-    time_derivative_ptr->prediction_call = current_time;
+    state_jacobian.prediction_call = current_time;
     return;
 };
 
-void VisualTracking::SetDifferentialCallTime(TimeDerivative* time_derivative_ptr){
+void VisualTracking::SetDifferentialCallTime(){
     
     // TODO - This is a bad way of doing things because it implies that this function 
     // cannot be called before a prediction time function has been called.
-    time_derivative_ptr->differential_call = time_derivative_ptr->prediction_call;
+    state_jacobian.differential_call = state_jacobian.prediction_call;
     return;
 };
 
+void VisualTracking::InitializeStateJacobian(){
+    state_jacobian.clock_set = false;
+    state_jacobian.deltaT_set = false;
+    state_jacobian.deltaT.setIdentity();
+    state_jacobian.prediction_interval = -1;
+    state_jacobian.differential_interval = -1;
+    return;
+}
     
