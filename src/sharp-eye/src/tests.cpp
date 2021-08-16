@@ -345,6 +345,7 @@ class TestIncrementalMotion{
             ros::spinOnce();
             if(received_l && received_r){
                 // Set the time for recieving a new frame
+                std::cout<<"New Frame"<<std::endl;
                 tracking->SetPredictionCallTime();
 
                 // Visual Triangulation 
@@ -361,9 +362,10 @@ class TestIncrementalMotion{
                 // Perform tracking by estimating the new pose
                 VisualSlamBase::Frame* current_frame;
                 
+                Eigen::Transform<double,3,2> new_pose;
                 current_frame = tracking->GetCurrentFrame();
                 
-                tracking->EstimateIncrementalMotion(*current_frame);
+                new_pose = tracking->EstimateIncrementalMotion(*current_frame);
                 
                 // Calculate Motion Derivative
                 if(tracking->map.local_maps[0].frames.size() > 1){

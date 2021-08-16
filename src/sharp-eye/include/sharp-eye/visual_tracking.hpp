@@ -43,6 +43,9 @@ class VisualTracking{
     // Left and Right Camera transform
     Eigen::Transform<double,3,2> T_caml2camr;
 
+    // Correspondences
+    int frame_correspondences;
+
     struct ManifoldDerivative{
         Eigen::Transform<double,3,2> deltaT;
         _Time prediction_call;
@@ -136,8 +139,10 @@ class VisualTracking{
      * @return VisualSlamBase::Frame* 
      */
     VisualSlamBase::Frame* GetCurrentFrame();
-    
+
     VisualSlamBase::Frame* GetPreviousFrame();
+
+    bool HasInf(Eigen::Vector3d vec);
     private:
     void InitializeStateJacobian();
 

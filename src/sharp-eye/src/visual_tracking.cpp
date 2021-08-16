@@ -142,6 +142,7 @@ int VisualTracking::FindCorrespondences(FramepointVector &previous_frame,Framepo
         correspondences++;
     };
 
+    frame_correspondences = correspondences;
     return correspondences;
 };
 
@@ -185,7 +186,7 @@ Eigen::Matrix<double,4,6> VisualTracking::FindJacobian(Eigen::Vector3d& left_cam
     Eigen::Matrix3d hat_cam_coordinates;
     Eigen::Matrix3d identity3;
     identity3.setIdentity();
-    std::cout<<"G coordinates "<<x_l<<" "<<y_l<<" "<<" "<<z_l<<std::endl;
+    //std::cout<<"G coordinates "<<x_l<<" "<<y_l<<" "<<" "<<z_l<<std::endl;
     hat_cam_coordinates(0,0) = 0.0;
     hat_cam_coordinates(0,1) = -2*z_l;
     hat_cam_coordinates(0,2) = 2*y_l;
@@ -228,18 +229,26 @@ Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSla
     const double maximum_depth = 7.0;
     const int number_of_iterations = 20;
 
+
+    if(frame_correspondences == 0){
+        std::cout<<"Debug : Warning : Motion cannot be estimated, no frame correspondences "<<std::endl; 
+        return frame_ptr.T_world2cam;
+    };
+    int inlier_count = 0;
+
     for (int i = 0; i < number_of_iterations; i++) {
         //Initialize least squares components
         
         Eigen::Matrix<double,6,6> H; //< Hessian
+        H.setZero();
         
         Eigen::VectorXd b;
         b.resize(6);
+        b.setZero();
 
         Eigen::Matrix4d omega; //< Information matrix 
         omega.setIdentity();
-
-        //loop over all framepoints
+        
         for (VisualSlamBase::Framepoint& fp : frame_ptr.points){
 
             if (fp.previous == NULL){
@@ -262,6 +271,16 @@ Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSla
             ////increase weight for landmarks
             //omega = ..;
             //}
+            // Checking coordinates for invalid values
+            if(HasInf(p_caml) || HasInf(p_camr)){
+                std::cout<<"Invalid  Camera Points - INF"<<std::endl;
+                continue;
+                
+            }
+            if(p_caml.hasNaN() || p_camr.hasNaN()){
+                std::cout<<"Invalid  Camera Points - NaN"<<std::endl;
+                continue;
+            };
 
             // Now we project the points from the previous frame into pixel coordinates
             Eigen::Vector3d lcam_pixels,rcam_pixels;
@@ -273,8 +292,11 @@ Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSla
             rcam_pixels[0] = rcam_pixels[0]/rcam_pixels[2];
             rcam_pixels[1] = rcam_pixels[1]/rcam_pixels[2];
 
-            //std::cout<<"Lcam pixels "<<lcam_pixels<<std::endl;
-            //std::cout<<"Rcam pixels "<<rcam_pixels<<std::endl;
+            if(lcam_pixels.hasNaN() || rcam_pixels.hasNaN()){
+                std::cout<<"Invalid pixles - NaN"<<std::endl;
+                continue;
+            };
+
 
             // Calculating Reprojection Error
             Eigen::Vector4d reproj_error;
@@ -285,7 +307,6 @@ Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSla
             reproj_error[3] = fp.keypoint_r.keypoint.pt.y - rcam_pixels[1];
 
             const double error_squared = reproj_error.transpose()*reproj_error;
-            //std::cout<<"Error squared "<<error_squared<<std::endl;
             // Robustify the Kernel
             if(error_squared > kernel_maximum_error){
                 if(ignore_outliers){
@@ -297,14 +318,13 @@ Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSla
             }
             else{
                 fp.inlier = true;
+                inlier_count++;
             };
             
             // Calculate the jacobian
 
-            //std::cout<<"Pcaml "<<p_caml<<std::endl;
-            //std::cout<<"Pcamr "<<p_camr<<std::endl;
-            Eigen::Matrix<double,4,6> J = FindJacobian(p_caml,p_camr,frame_ptr.camera_l,frame_ptr.camera_r);
             
+            Eigen::Matrix<double,4,6> J = FindJacobian(p_caml,p_camr,frame_ptr.camera_l,frame_ptr.camera_r);
             // Adjusting for points that are too close or too far
             if(p_caml[2] < close_depth ){
                 // Too close
@@ -324,14 +344,15 @@ Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSla
 
         }
         //compute (Identity-damped) solution
+
         Eigen::VectorXd dx;
+        dx.setZero();
         Eigen::MatrixXd identity6;
         identity6.resize(6,6);
         identity6.setIdentity();
 
         H = H + identity6;
         dx = H.ldlt().solve(-b);
-
         // dx ends up being a vector with the translation variables and the rotation angles
         // The rotation angles are most probably rodrigues angles
         
@@ -362,9 +383,14 @@ Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSla
 
         // Simplest way to assign a 3D rotation matrix
         dT.matrix().block<3,3>(0,0) = eigen_rot_matrix;
+        //std::cout<<"Debug : dT Matrix"<<std::endl;
+        //std::cout<<dT.matrix()<<std::endl;
+        frame_ptr.T_world2cam = dT*frame_ptr.T_world2cam;     
+    };
 
-        frame_ptr.T_world2cam = dT*frame_ptr.T_world2cam;
-        frame_ptr.T_cam2world = frame_ptr.T_world2cam.inverse();
+    frame_ptr.T_cam2world = frame_ptr.T_world2cam.inverse();
+    for(VisualSlamBase::Framepoint& fp : frame_ptr.points){
+            fp.world_coordinates = frame_ptr.T_world2cam * fp.camera_coordinates;
     }
 
     return frame_ptr.T_cam2world;
@@ -671,5 +697,19 @@ void VisualTracking::InitializeNode(){
             };  
         };
     };  
+};
+
+bool VisualTracking::HasInf(Eigen::Vector3d vec){
+    /**
+     * @brief Checks the vector to see if any of the elements have an inf
+     * 
+     */
+
+    for(int i = 0; i<vec.size(); i++){
+        if(std::isinf(vec[i])){
+            return true;
+        };
+    };  
+    return false;
 };
     
