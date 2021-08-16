@@ -185,10 +185,10 @@ Eigen::Matrix<double,4,6> VisualTracking::FindJacobian(Eigen::Vector3d& left_cam
     Eigen::Matrix3d hat_cam_coordinates;
     Eigen::Matrix3d identity3;
     identity3.setIdentity();
-
+    std::cout<<"G coordinates "<<x_l<<" "<<y_l<<" "<<" "<<z_l<<std::endl;
     hat_cam_coordinates(0,0) = 0.0;
     hat_cam_coordinates(0,1) = -2*z_l;
-    hat_cam_coordinates(0,2) = -2*y_l;
+    hat_cam_coordinates(0,2) = 2*y_l;
     hat_cam_coordinates(1,0) = 2*z_l;
     hat_cam_coordinates(1,1) = 0.0;
     hat_cam_coordinates(1,2) = -2*x_l;
@@ -198,10 +198,25 @@ Eigen::Matrix<double,4,6> VisualTracking::FindJacobian(Eigen::Vector3d& left_cam
 
     Eigen::Matrix<double,3,6> J_Transform;
     J_Transform.block<3,3>(0,0) = identity3;
-    J_Transform.block<3,3>(0,3) = hat_cam_coordinates;
+    J_Transform.block<3,3>(0,3) = -hat_cam_coordinates;
 
     J.block<2,6>(0,0) = left_projection_derivative * J_Transform;
     J.block<2,6>(2,0) = right_projection_derivative * J_Transform;
+
+    //Eigen::Matrix<double,2,6> J_test;
+    //J_test(0,0) = fx_l/z_l;
+    //J_test(0,1) = 0;
+    //J_test(0,2) = -fx_l * x_l /(z_l*z_l);
+    //J_test(0,3) = -fx_l * x_l * y_l / (z_l*z_l);
+    //J_test(0,4) = fx_l * (1 + (x_l*x_l)/(z_l*z_l));
+    //J_test(0,5) = -fx_l * y_l /z_l;
+    //J_test(1,0) = 0;
+    //J_test(1,1) = fy_l / z_l;
+    //J_test(1,2) = -fy_l * y_l /(z_l*z_l);
+    //J_test(1,3) = -fy_l * (1 + (y_l*y_l)/(z_l*z_l));
+    //J_test(1,4) = fy_l * x_l * y_l / (z_l*z_l);
+    //J_test(1,5) = fy_l * x_l /z_l;
+
     return J;
 };
 
@@ -286,11 +301,10 @@ Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSla
             
             // Calculate the jacobian
 
-            std::cout<<"Pcaml "<<p_caml<<std::endl;
-            std::cout<<"Pcamr "<<p_camr<<std::endl;
+            //std::cout<<"Pcaml "<<p_caml<<std::endl;
+            //std::cout<<"Pcamr "<<p_camr<<std::endl;
             Eigen::Matrix<double,4,6> J = FindJacobian(p_caml,p_camr,frame_ptr.camera_l,frame_ptr.camera_r);
             
-            std::cout<<"Jacobian "<<J<<std::endl;
             // Adjusting for points that are too close or too far
             if(p_caml[2] < close_depth ){
                 // Too close
