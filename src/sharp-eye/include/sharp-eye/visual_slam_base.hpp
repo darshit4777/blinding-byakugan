@@ -61,6 +61,6 @@ class VisualSlamBase{
        Eigen::Transform<double,3,2> T_map2world, T_world2map;
        std::vector<LocalMap> local_maps;
        std::vector<Landmark> enclosed_landmarks;
-       g2o::OptimizableGraph pose_graph;
+       g2o::OptimizableGraph* pose_graph_ptr;
    };
 };

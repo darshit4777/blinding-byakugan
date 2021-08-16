@@ -209,6 +209,10 @@ FramepointVector VisualTriangulation::Generate3DCoordinates(MatchVector &matched
         yr = matched_features[i].second.keypoint.pt.y;
 
         px_distance = fabs(xl-xr);
+        if(px_distance == 0){
+            // Could be a point at infinity
+            continue;
+        };
         camera_coordinates.z() = focal_length * baseline/px_distance;
         double cx = camera_intrinsics.coeff(0,2);
         double cy = camera_intrinsics.coeff(1,2);

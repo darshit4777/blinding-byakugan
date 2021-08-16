@@ -127,6 +127,17 @@ class VisualTracking{
      * 
      */
     void InitializeNode();
+
+    void SetFramepointVector(FramepointVector& framepoints);
+
+    /**
+     * @brief Gets the pointer to the current frame 
+     * 
+     * @return VisualSlamBase::Frame* 
+     */
+    VisualSlamBase::Frame* GetCurrentFrame();
+    
+    VisualSlamBase::Frame* GetPreviousFrame();
     private:
     void InitializeStateJacobian();
 

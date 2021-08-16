@@ -239,6 +239,7 @@ class TestFindCorrespondences{
     public:
     Camera cam_left;
     Camera cam_right;
+    std::vector<VisualSlamBase::Frame> frames;
     TestFindCorrespondences(){
         // Initializing Camera Matrices
         cam_left.intrinsics << 458.654,     0.0,    367.215,
@@ -276,13 +277,15 @@ class TestFindCorrespondences{
                 triangulator.Generate3DCoordinates(matches,framepoints,0.11,457.95,cam_left.intrinsics);
                 VisualSlamBase::Frame current_frame;
                 current_frame.points = framepoints;
-                tracking.frames.push_back(current_frame);
+                frames.push_back(current_frame);
                 current_frame.points.clear();
-                if(tracking.frames.size() > 1){
+                if(frames.size() > 1){
                     // Skip the first frame, from the second frame onwards..
-                    int previous_index = tracking.frames.size() - 2;
-                    int current_index = tracking.frames.size() - 1;
-                    tracking.FindCorrespondences(tracking.frames[previous_index].points,tracking.frames[current_index].points);
+                    int previous_index = frames.size() - 2;
+                    int current_index = frames.size() - 1;
+                    int correspondences;
+                    correspondences = tracking.FindCorrespondences(frames[previous_index].points,frames[current_index].points);
+                    std::cout<<correspondences<<std::endl;
 
                 }
                 
@@ -291,7 +294,7 @@ class TestFindCorrespondences{
     };  
 };
 
-class TestFindJacobian{
+class TestIncrementalMotion{
     public:
     Camera cam_left;
     Camera cam_right;
@@ -299,15 +302,17 @@ class TestFindJacobian{
     Eigen::Transform<double,3,2> T_body2camr;
     Eigen::Transform<double,3,2> T_caml2camr;
 
+    // Triangulation
     VisualTriangulation triangulator;
-    VisualTracking* tracking;
     std::vector<VisualSlamBase::KeypointWD> features_l;
     std::vector<VisualSlamBase::KeypointWD> features_r;
 
+    VisualTracking* tracking;
+    
     FramepointVector framepoints;
     MatchVector matches;
     
-    TestFindJacobian(){
+    TestIncrementalMotion(){
         // Initializing Camera Matrices
         cam_left.intrinsics << 458.654,     0.0,    367.215,
                                0.0, 457.296,    248.375,
@@ -327,9 +332,9 @@ class TestFindJacobian{
                                 -0.0253898008918, 0.0179005838253, 0.999517347078, 0.00786212447038,
                                 0.0, 0.0, 0.0, 1.0;
 
-        T_caml2camr = T_body2caml.inverse() * T_body2camr;
-
         tracking = new VisualTracking(cam_left,cam_right);
+        tracking->T_caml2camr = T_body2caml.inverse() * T_body2camr;
+
         TestMain();
         return;
     };
@@ -340,23 +345,34 @@ class TestFindJacobian{
             ros::spinOnce();
             if(received_l && received_r){
                 // Set the time for recieving a new frame
-                tracking->SetPredictionCallTime(&tracking->pose_derivative);
-                DetectFeatures();
+                tracking->SetPredictionCallTime();
 
+                // Visual Triangulation 
+                DetectFeatures();
                 Calculate3DCoordinates();
                 
-                
-                GenerateFeatureCorrespndences();
-                if(tracking->frames.size() > 1){
-                    int current_frame_index = tracking->frames.size() - 1;
-                    int previous_frame_index = current_frame_index - 1;
+                // Store the framepoints for tracking
+                tracking->SetFramepointVector(framepoints);
 
-                    tracking->CalculatePosePrediction(&tracking->frames[current_frame_index],tracking->pose_derivative);
-                    tracking->SetDifferentialCallTime(&tracking->pose_derivative);
-                    VisualSlamBase::Frame* frame_ptr = &tracking->frames[current_frame_index];
-                    tracking->EstimateIncrementalMotion(*frame_ptr);    
+                // Initialize a node
+                /// This step will initialize a new frame or local map.
+                tracking->InitializeNode();
+
+                // Perform tracking by estimating the new pose
+                VisualSlamBase::Frame* current_frame;
+                
+                current_frame = tracking->GetCurrentFrame();
+                
+                tracking->EstimateIncrementalMotion(*current_frame);
+                
+                // Calculate Motion Derivative
+                if(tracking->map.local_maps[0].frames.size() > 1){
+                    VisualSlamBase::Frame* previous_frame;
+                    previous_frame = tracking->GetPreviousFrame();
+                    tracking->CalculateMotionJacobian(current_frame,previous_frame);
                 }
                 
+
                 
             };
         };
@@ -383,28 +399,6 @@ class TestFindJacobian{
             return;
     };
 
-    void GenerateFeatureCorrespndences(){
-        VisualSlamBase::Frame current_frame;
-        current_frame.points = framepoints;
-        current_frame.camera_l = cam_left;
-        current_frame.camera_r = cam_right;
-        if(tracking->frames.empty()){
-            // This is the first frame
-            current_frame.T_world2cam.setIdentity();
-            for(VisualSlamBase::Framepoint& framepoint : current_frame.points){
-                framepoint.world_coordinates = framepoint.camera_coordinates;
-            }
-        }
-        tracking->frames.push_back(current_frame);
-        // Skip the first frame, from the second frame onwards..
-        if(tracking->frames.size() > 1){
-            int previous_index = tracking->frames.size() - 2;
-            int current_index = tracking->frames.size() - 1;
-            tracking->FindCorrespondences(tracking->frames[previous_index].points,tracking->frames[current_index].points);
-        };
-        return;
-    };
-
 };
 
 
@@ -418,6 +412,6 @@ int main(int argc, char **argv){
     //TestGetMatchedKeypoints test;
     //TestGenerate3DCoordinates test(nh);
     //TestFindCorrespondences test;
-    TestFindJacobian test;
+    TestIncrementalMotion test;
     return 0;
 }

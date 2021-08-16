@@ -7,6 +7,9 @@ project(sharp-eye)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
+#list(APPEND CMAKE_PREFIX_PATH "/home/darshit/blinding-byakugan/src/g2o/generated/")
+list(APPEND CMAKE_MODULE_PATH "/home/darshit/blinding-byakugan/src/g2o/cmake_modules")
+
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   tf2_ros
@@ -16,6 +19,12 @@ find_package(catkin REQUIRED COMPONENTS
   image_transport
   cv_bridge
 )
+
+
+find_package(G2O REQUIRED)
+include_directories( ${G2O_INCLUDE_DIRS} )
+add_definitions( ${G2O_DEFINITIONS} )
+link_directories( ${G2O_LIBRARY_DIRS} )
 
 find_package( PCL 1.8 REQUIRED )
 include_directories( ${PCL_INCLUDE_DIRS} )
@@ -119,7 +128,8 @@ catkin_package(
   INCLUDE_DIRS include
   ${OpenCV_INCLUDE_DIRS}
   ${PCL_INCLUDE_DIRS}
-#  LIBRARIES sharp-eye
+  ${G2O_INCLUDE_DIRS}
+  # LIBRARIES g2o
 #  CATKIN_DEPENDS cv2 roscpp
 #  DEPENDS system_lib
 )
@@ -135,6 +145,7 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}
   ${PCL_INCLUDE_DIRS}
+  ${G2O_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -172,6 +183,7 @@ add_dependencies(test_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED
 target_link_libraries(visual_node
   ${catkin_LIBRARIES}
   ${OpenCV_LIBS}
+  ${G2O_LIBRARY_DIRS}
   visual_triangulation
 )
 
@@ -181,6 +193,7 @@ target_link_libraries(test_node
   visual_triangulation
   visual_tracking
   ${PCL_LIBRARIES}
+  ${G2O_LIBRARY_DIRS}
 )
 
 #############
