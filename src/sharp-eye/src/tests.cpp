@@ -464,7 +464,7 @@ int main(int argc, char **argv){
     //TestDetectFeatures test;
     //TestGetMatchedKeypoints test;
     //TestGenerate3DCoordinates test(nh);
-    TestFindCorrespondences test;
-    //TestIncrementalMotion test;
+    //TestFindCorrespondences test;
+    TestIncrementalMotion test;
     return 0;
 }
