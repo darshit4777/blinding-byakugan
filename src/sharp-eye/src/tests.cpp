@@ -18,12 +18,16 @@
 
 cv::Mat image_l;
 cv::Mat image_r;
+cv::Mat undistorted_l;
+cv::Mat undistorted_r;
 bool received_l,received_r;
 //static const std::string OPENCV_WINDOW = "Image window";
 static const std::string OPENCV_WINDOW_LEFT = "Left Image window";
 static const std::string OPENCV_WINDOW_RIGHT = "Right Image window";
 typedef std::vector<std::pair<VisualSlamBase::KeypointWD,VisualSlamBase::KeypointWD>> MatchVector;
 typedef std::vector<VisualSlamBase::Framepoint> FramepointVector;
+
+
 
 void CameraCallback(const sensor_msgs::ImageConstPtr& msg,int cam){
     // Simply store the ros image into an opencv format
@@ -296,11 +300,16 @@ class TestFindCorrespondences{
 
 class TestIncrementalMotion{
     public:
-    Camera cam_left;
-    Camera cam_right;
+
     Eigen::Transform<double,3,2> T_body2caml;
     Eigen::Transform<double,3,2> T_body2camr;
     Eigen::Transform<double,3,2> T_caml2camr;
+
+    Camera cam_left;
+    Camera cam_right;
+
+    cv::Mat cam_l_intrinsics;
+    cv::Mat cam_r_intrinsics;
 
     // Triangulation
     VisualTriangulation triangulator;
@@ -318,9 +327,41 @@ class TestIncrementalMotion{
                                0.0, 457.296,    248.375,
                                0.0,     0.0,        1.0;
 
+        cam_left.distortion_coeffs.push_back(-0.28340811);
+        cam_left.distortion_coeffs.push_back(0.07395907);
+        cam_left.distortion_coeffs.push_back(0.00019359);
+        cam_left.distortion_coeffs.push_back(1.76187114e-05);
+
         cam_right.intrinsics << 457.587,        0.0, 379.999,
                                     0.0,    456.134, 255.238,
                                     0.05,        0.0,    1.0;
+
+        cam_right.distortion_coeffs.push_back(-0.28368365);
+        cam_right.distortion_coeffs.push_back(0.07451284);
+        cam_right.distortion_coeffs.push_back(-0.00010473);
+        cam_right.distortion_coeffs.push_back(-3.55590700e-05);
+
+        cam_l_intrinsics = cv::Mat(3,3,cv::DataType<double>::type);    
+        cam_l_intrinsics.at<double>(0,0) = cam_left.intrinsics(0,0);
+        cam_l_intrinsics.at<double>(0,1) = cam_left.intrinsics(0,1);
+        cam_l_intrinsics.at<double>(0,2) = cam_left.intrinsics(0,2);
+        cam_l_intrinsics.at<double>(1,0) = cam_left.intrinsics(1,0);
+        cam_l_intrinsics.at<double>(1,1) = cam_left.intrinsics(1,1);
+        cam_l_intrinsics.at<double>(1,2) = cam_left.intrinsics(1,2);
+        cam_l_intrinsics.at<double>(2,0) = cam_left.intrinsics(2,0);
+        cam_l_intrinsics.at<double>(2,1) = cam_left.intrinsics(2,1);
+        cam_l_intrinsics.at<double>(2,2) = cam_left.intrinsics(2,2);
+
+        cam_r_intrinsics = cv::Mat(3,3,cv::DataType<double>::type);
+        cam_r_intrinsics.at<double>(0,0) = cam_right.intrinsics(0,0);
+        cam_r_intrinsics.at<double>(0,1) = cam_right.intrinsics(0,1);
+        cam_r_intrinsics.at<double>(0,2) = cam_right.intrinsics(0,2);
+        cam_r_intrinsics.at<double>(1,0) = cam_right.intrinsics(1,0);
+        cam_r_intrinsics.at<double>(1,1) = cam_right.intrinsics(1,1);
+        cam_r_intrinsics.at<double>(1,2) = cam_right.intrinsics(1,2);
+        cam_r_intrinsics.at<double>(2,0) = cam_right.intrinsics(2,0);
+        cam_r_intrinsics.at<double>(2,1) = cam_right.intrinsics(2,1);
+        cam_r_intrinsics.at<double>(2,2) = cam_right.intrinsics(2,2);                                    
 
         T_body2caml.matrix()<<   0.0148655429818, -0.999880929698, 0.00414029679422, -0.0216401454975,
                                     0.999557249008, 0.0149672133247, 0.025715529948, -0.064676986768,
@@ -345,6 +386,9 @@ class TestIncrementalMotion{
             ros::spinOnce();
             if(received_l && received_r){
                 // Set the time for recieving a new frame
+
+                // Calibrate
+                UndistortImages(cam_l_intrinsics,cam_r_intrinsics,cam_left.distortion_coeffs,cam_right.distortion_coeffs,image_l,image_r);
                 std::cout<<"New Frame"<<std::endl;
                 tracking->SetPredictionCallTime();
 
@@ -366,6 +410,8 @@ class TestIncrementalMotion{
                 current_frame = tracking->GetCurrentFrame();
                 
                 new_pose = tracking->EstimateIncrementalMotion(*current_frame);
+                std::cout<<"Debug : New Pose"<<std::endl;
+                std::cout<<new_pose.matrix()<<std::endl;
                 
                 // Calculate Motion Derivative
                 if(tracking->map.local_maps[0].frames.size() > 1){
@@ -373,9 +419,6 @@ class TestIncrementalMotion{
                     previous_frame = tracking->GetPreviousFrame();
                     tracking->CalculateMotionJacobian(current_frame,previous_frame);
                 }
-                
-
-                
             };
         };
     };
@@ -383,11 +426,11 @@ class TestIncrementalMotion{
     void DetectFeatures(){
         if(received_l){
                 features_l.clear();
-                features_l = triangulator.DetectAndComputeFeatures(&image_l,features_l,false);
+                features_l = triangulator.DetectAndComputeFeatures(&undistorted_l,features_l,false);
             }
         if(received_r){
             features_r.clear();
-            features_r = triangulator.DetectAndComputeFeatures(&image_r,features_r,false);
+            features_r = triangulator.DetectAndComputeFeatures(&undistorted_r,features_r,false);
         }
 
         return;
@@ -399,6 +442,14 @@ class TestIncrementalMotion{
             // TODO : Put parametized arguments for baseline and fx
             triangulator.Generate3DCoordinates(matches,framepoints,0.110074,457.95,cam_left.intrinsics);
             return;
+    };
+
+    void UndistortImages(cv::Mat cam_l_intrinsics,cv::Mat cam_r_intrinsics,std::vector<double> l_distortion,std::vector<double> r_distortion,cv::Mat& image_l,cv::Mat& image_r){
+
+        cv::undistort(image_l,undistorted_l,cam_l_intrinsics,l_distortion);
+        cv::undistort(image_r,undistorted_r,cam_r_intrinsics,r_distortion);
+        return;
+
     };
 
 };
@@ -413,7 +464,7 @@ int main(int argc, char **argv){
     //TestDetectFeatures test;
     //TestGetMatchedKeypoints test;
     //TestGenerate3DCoordinates test(nh);
-    //TestFindCorrespondences test;
-    TestIncrementalMotion test;
+    TestFindCorrespondences test;
+    //TestIncrementalMotion test;
     return 0;
 }

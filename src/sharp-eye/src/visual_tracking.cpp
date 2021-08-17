@@ -100,18 +100,18 @@ int VisualTracking::FindCorrespondences(FramepointVector &previous_frame,Framepo
 
         // Before calling the matcher, we need to arrange our datastructures
         cv::Mat query_descriptor;
-        cv::Mat descriptor_current;
+        cv::Mat current_descriptor;
     
         // The match shortlist is a vector of shortlisted indices from current frame
 
         // Assigning the current and query descriptors
         for(int i =0; i < match_shortlist.size(); i++){
-            descriptor_current.push_back(current_frame[match_shortlist[i]].keypoint_l.descriptor);
+            current_descriptor.push_back(current_frame[match_shortlist[i]].keypoint_l.descriptor);
         };
 
         query_descriptor = query_framepoint.keypoint_l.descriptor;
 
-        matcher.knnMatch(query_descriptor,descriptor_current,knn_matches,2);
+        matcher.knnMatch(query_descriptor,current_descriptor,knn_matches,2);
         if(knn_matches[0].empty()){
             // If no matches are returned
             continue;
@@ -137,8 +137,9 @@ int VisualTracking::FindCorrespondences(FramepointVector &previous_frame,Framepo
         // previous frame and vice versa.
         
         // Assigning to each others previous and next
-        query_framepoint.next = boost::make_shared<VisualSlamBase::Framepoint>( current_frame[good_matches[0].trainIdx]);
-        current_frame[good_matches[0].trainIdx].previous = boost::make_shared<VisualSlamBase::Framepoint>(query_framepoint);
+        int current_frame_idx = match_shortlist[good_matches[0].trainIdx];
+        query_framepoint.next = boost::make_shared<VisualSlamBase::Framepoint>( current_frame[current_frame_idx]);
+        current_frame[current_frame_idx].previous = boost::make_shared<VisualSlamBase::Framepoint>(query_framepoint);
         correspondences++;
     };
 
@@ -227,7 +228,7 @@ Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSla
     const double kernel_maximum_error = 200000;
     const double close_depth = 5.0;
     const double maximum_depth = 7.0;
-    const int number_of_iterations = 20;
+    const int number_of_iterations = 100;
 
 
     if(frame_correspondences == 0){
@@ -258,11 +259,14 @@ Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSla
             // Transforming the corresponding points from the previous frame to current
             // frame camera coordinates
             
-            Eigen::Vector3d p_caml = frame_ptr.T_world2cam*fp.previous->world_coordinates;
+            Eigen::Vector3d p_caml = frame_ptr.T_cam2world*fp.previous->world_coordinates;
             Eigen::Vector3d p_camr = this->T_caml2camr.inverse()*p_caml;
 
-            //std::cout<<"pcaml "<<p_caml<<std::endl;
-            //std::cout<<"pcamr "<<p_camr<<std::endl;
+            std::cout<<"Transform cam2world "<<frame_ptr.T_cam2world.matrix()<<std::endl;
+            std::cout<<"World Coordinates "<<fp.previous->world_coordinates<<std::endl;
+
+            std::cout<<"pcaml "<<p_caml<<std::endl;
+            std::cout<<"pcamr "<<p_camr<<std::endl;
             
             // TODO : Use landmark position estimates
             //preferably use landmark position estimate
@@ -344,7 +348,7 @@ Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSla
 
         }
         //compute (Identity-damped) solution
-
+        
         Eigen::VectorXd dx;
         dx.setZero();
         Eigen::MatrixXd identity6;
@@ -353,6 +357,7 @@ Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSla
 
         H = H + identity6;
         dx = H.ldlt().solve(-b);
+
         // dx ends up being a vector with the translation variables and the rotation angles
         // The rotation angles are most probably rodrigues angles
         
@@ -387,13 +392,15 @@ Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSla
         //std::cout<<dT.matrix()<<std::endl;
         frame_ptr.T_world2cam = dT*frame_ptr.T_world2cam;     
     };
+    std::cout<<"Debug : Inlier Count"<<std::endl;
+    std::cout<<inlier_count<<std::endl;
 
     frame_ptr.T_cam2world = frame_ptr.T_world2cam.inverse();
     for(VisualSlamBase::Framepoint& fp : frame_ptr.points){
             fp.world_coordinates = frame_ptr.T_world2cam * fp.camera_coordinates;
     }
 
-    return frame_ptr.T_cam2world;
+    return frame_ptr.T_world2cam;
 };
 
 VisualTracking::ManifoldDerivative VisualTracking::CalculateMotionJacobian(VisualSlamBase::Frame* current_frame_ptr,VisualSlamBase::Frame* previous_frame_ptr){
@@ -413,6 +420,8 @@ VisualTracking::ManifoldDerivative VisualTracking::CalculateMotionJacobian(Visua
     else{
         std::cout<<"Warning: Debug : The differential time delta was not set, this may cause pose predictions to fail"<<std::endl;
     };
+    std::cout<<"Debug : Motion Derivative"<<std::endl;
+    std::cout<<state_jacobian.deltaT.matrix()<<std::endl;
     state_jacobian.deltaT_set = true;
     return state_jacobian;
 
@@ -431,7 +440,8 @@ Eigen::Transform<double,3,2> VisualTracking::CalculatePosePrediction(VisualSlamB
      */
     auto current_time = std::chrono::high_resolution_clock::now();
     Eigen::Transform<double,3,2> T_predicted;
-
+    std::cout<<"Debug : Before Pose Prediction"<<std::endl;
+    std::cout<<frame_ptr->T_world2cam.matrix()<<std::endl;
     if(state_jacobian.deltaT_set){
         double time_elapsed = std::chrono::duration<double, std::milli>(state_jacobian.prediction_call - state_jacobian.previous_prediction_call).count();
         int iterations;
@@ -447,6 +457,8 @@ Eigen::Transform<double,3,2> VisualTracking::CalculatePosePrediction(VisualSlamB
             frame_ptr->T_world2cam = state_jacobian.deltaT * frame_ptr->T_world2cam;
         };
     };
+    std::cout<<"Debug : Pose Prediction"<<std::endl;
+    std::cout<<frame_ptr->T_world2cam.matrix()<<std::endl;
     return frame_ptr->T_world2cam;
 };
 
@@ -562,140 +574,94 @@ void VisualTracking::InitializeNode(){
     }
     else{
         // If local maps are not empty, then we are currently working on a local map.
-        // We first check if the frame vector is empty 
-
         // - Get the current local map we are working with
         VisualSlamBase::LocalMap* current_lmap;
         int current_lmap_idx = map.local_maps.size() - 1;
         current_lmap = &map.local_maps[current_lmap_idx];
-        
-        
-        // Check if we are working with the first frame of this local map
-        if(current_lmap->frames.empty()){
-            // Initialize the first frame
-            VisualSlamBase::Frame frame;
-            // Adding points as the current framepoint vector
-            frame.points = framepoint_vec;
-            // TODO : what if the framepoint vector is empty ? 
-            frame.camera_l = camera_left;
-            frame.camera_r = camera_right;
-            frame.image_l = img_l;
-            frame.image_l = img_r;
+    
+    
+        // The frames are not empty. The first frame has been set.
+        // There is atleast one more frame in the local map
+        // We must check if it is appropriate to continue in this local map or to create 
+        // a new one. This is done by checking the correspondences between the current 
+        // frame and the previous one. 
+
+        // Initialize the frame first
+        VisualSlamBase::Frame frame;
+        // Adding points as the current framepoint vector
+        frame.points = framepoint_vec;
+        // TODO : what if the framepoint vector is empty ? 
+        frame.camera_l = camera_left;
+        frame.camera_r = camera_right;
+        frame.image_l = img_l;
+        frame.image_l = img_r;
+        // Now we check correspondences
+        int current_frame_idx = current_lmap->frames.size() -1;
+        int correspondences;
+        correspondences = FindCorrespondences(current_lmap->frames[current_frame_idx].points,frame.points);
+        if(correspondences == 0){
+            // The track is broken. We must initialize a new local map
+            std::cout<<"No correspondences found, creating new local map and new Frame"<<std::endl;
+            VisualSlamBase::LocalMap l_map_new;
             
-            // Setting identity transforms for first frame
-            frame.T_world2cam.setIdentity();
-            frame.T_cam2world.setIdentity();
-
-            for(VisualSlamBase::Framepoint& framepoint : frame.points){
-                framepoint.world_coordinates = framepoint.camera_coordinates;
+            // Setting the coordinates for the new local map
+            
+            // If a pose derivative is available, we can perform pose prediction to get 
+            // the pose of the new local map
+            if(state_jacobian.deltaT_set){
+                CalculatePosePrediction(&frame);
+                frame.T_cam2world = frame.T_world2cam.inverse();
+                l_map_new.T_world2map = frame.T_world2cam;
+                l_map_new.T_map2world = l_map_new.T_world2map.inverse();
+            }
+            else{
+                // If the pose derivative is not available for some reason. 
+                // We attach the pose of the latest known frame.
+                std::cout<<"Warninig : Debug : Pose derivative was not available for a case where a new local map was being created"<<std::endl;
+                VisualSlamBase::Frame* last_frame = GetCurrentFrame();
+                
+                frame.T_world2cam = last_frame->T_world2cam;
+                frame.T_cam2world = last_frame->T_cam2world;
+                l_map_new.T_world2map = last_frame->T_world2cam;
+                l_map_new.T_map2world = last_frame->T_cam2world;
             };
-
-            current_lmap->frames.push_back(frame);
-            std::cout<<"Active local map, first frame"<<std::endl;
+            // Setting the frame world coordinates
+            for(VisualSlamBase::Framepoint& framepoint : frame.points){
+                framepoint.world_coordinates = frame.T_world2cam * framepoint.camera_coordinates;
+            };
+            l_map_new.frames.push_back(frame);
+            map.local_maps.push_back(l_map_new);
             return;
         }
         else{
-            // The frames are not empty. The first frame has been set.
-            // There is atleast one more frame in the local map
-            // We must check if it is appropriate to continue in this local map or to create 
-            // a new one. This is done by checking the correspondences between the current 
-            // frame and the previous one. 
-
-            // Initialize the frame first
-            VisualSlamBase::Frame frame;
-            // Adding points as the current framepoint vector
-            frame.points = framepoint_vec;
-            // TODO : what if the framepoint vector is empty ? 
-            frame.camera_l = camera_left;
-            frame.camera_r = camera_right;
-            frame.image_l = img_l;
-            frame.image_l = img_r;
-
-            // Now we check correspondences
-            int current_frame_idx = current_lmap->frames.size() -1;
-            int correspondences;
-
-            correspondences = FindCorrespondences(current_lmap->frames[current_frame_idx].points,frame.points);
-
-            if(correspondences == 0){
-                // The track is broken. We must initialize a new local map
-                
-                // No local maps have been created yet - this is probably the first local map.
-                VisualSlamBase::LocalMap l_map_new;
-
-                // Setting the coordinates for the new local map
-                
-                // If a pose derivative is available, we can perform pose prediction to get 
-                // the pose of the new local map
-                if(state_jacobian.deltaT_set){
-                    CalculatePosePrediction(&frame);
-                    frame.T_cam2world = frame.T_world2cam.inverse();
-                    l_map_new.T_world2map = frame.T_world2cam;
-                    l_map_new.T_map2world = l_map_new.T_world2map.inverse();
-
-                }
-                else{
-                    // If the pose derivative is not available for some reason. 
-                    // We attach the pose of the latest known frame.
-                    std::cout<<"Warninig : Debug : Pose derivative was not available for a case where a new local map was being created"<<std::endl;
-                    Eigen::Transform<double,3,2> last_T;
-                    int latest_idx_frame;
-                    
-                    latest_idx_frame = current_lmap->frames.size() - 1;
-                    last_T = current_lmap->frames[latest_idx_frame].T_world2cam;
-
-                    frame.T_world2cam = last_T;
-                    frame.T_cam2world = frame.T_world2cam.inverse();
-                    l_map_new.T_world2map = last_T;
-                    l_map_new.T_map2world = l_map_new.T_world2map.inverse();
+            // Track is not broken, we can continue operating in the same local map
+            if(state_jacobian.deltaT_set){
+                // The derivative is pre-calculated and available
+            
+                CalculatePosePrediction(&frame);
+                frame.T_cam2world = frame.T_world2cam.inverse();
+                for(VisualSlamBase::Framepoint& framepoint : frame.points){
+                    framepoint.world_coordinates = frame.T_world2cam*framepoint.camera_coordinates;
                 };
+                std::cout<<"Pose Prediction applied"<<std::endl;
+            }
+            else{
+                // The derivative is not available
 
-                // Setting the frame world coordinates
+                // Get last known frame
+                VisualSlamBase::Frame* last_frame = GetCurrentFrame();
+                frame.T_world2cam = last_frame->T_world2cam;
+                frame.T_cam2world = last_frame->T_cam2world;
+
                 for(VisualSlamBase::Framepoint& framepoint : frame.points){
                     framepoint.world_coordinates = frame.T_world2cam * framepoint.camera_coordinates;
                 };
-                l_map_new.frames.push_back(frame);
-                map.local_maps.push_back(l_map_new);
-                std::cout<<"No correspondences, New Local Map, New Frame"<<std::endl;
-                return;
+                std::cout<<"Pose Prediction Not applied"<<std::endl;
             }
-            else{
-                // Track is not broken, we can continue operating in the same local map
-                if(state_jacobian.deltaT_set){
-                    // The derivative is pre-calculated and available
-                
-                    CalculatePosePrediction(&frame);
-                    frame.T_cam2world = frame.T_world2cam.inverse();
-
-                    for(VisualSlamBase::Framepoint& framepoint : frame.points){
-                        // TODO Check this transform
-                        framepoint.world_coordinates = frame.T_world2cam*framepoint.camera_coordinates;
-                    };
-                    std::cout<<"Pose Prediction applied"<<std::endl;
-                }
-                else{
-                    // The derivative is not available
-                    frame.T_world2cam.setIdentity();
-                    frame.T_cam2world.setIdentity();
-
-                    for(VisualSlamBase::Framepoint& framepoint : frame.points){
-                        // TODO Check this transform
-                        if(framepoint.camera_coordinates.hasNaN()){
-                            std::cout<<"Warning : Debug : Framepoint camera coordinates have invalid points (NaN)"<<std::endl;
-                        }
-                        if(std::isinf(framepoint.camera_coordinates[0]) || std::isinf(framepoint.camera_coordinates[1]) || std::isinf(framepoint.camera_coordinates[2])){
-                            std::cout<<"Warning : Debug : Framepoint camera coordinates have invalid points (Inf)"<<std::endl;
-                        }
-
-                        framepoint.world_coordinates = framepoint.camera_coordinates;
-                    };
-                    std::cout<<"Pose Prediction Not applied"<<std::endl;
-                }
-                current_lmap->frames.push_back(frame);
-                std::cout<<"Correspondences available, adding new frame to active local map"<<std::endl;
-                return;
-            };  
-        };
+            current_lmap->frames.push_back(frame);
+            std::cout<<"Correspondences available, adding new frame to active local map"<<std::endl;
+            return;
+        };  
     };  
 };
 

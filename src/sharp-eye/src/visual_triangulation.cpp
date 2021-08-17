@@ -172,7 +172,6 @@ MatchVector VisualTriangulation::GetKeypointMatches(FeatureVector &left_vec, Fea
 
         matched_pair.first = keypoint_l;
         matched_pair.second = keypoint_r;
-
         matched_vector.push_back(matched_pair);
     }
 
@@ -199,14 +198,18 @@ FramepointVector VisualTriangulation::Generate3DCoordinates(MatchVector &matched
         framepoint.keypoint_l = matched_features[i].first;
         framepoint.keypoint_r = matched_features[i].second;
 
+        //std::cout<<"Debug Keypoint Left coordinates "<<framepoint.keypoint_l.keypoint.pt<<std::endl;
+        //std::cout<<"Debug Keypoint Right coordinates "<<framepoint.keypoint_r.keypoint.pt<<std::endl;
         Eigen::Vector3d camera_coordinates; // Coordinates in the camera frame
         
         // Calculating pixel euclidean distance
         double px_distance,xl,yl,xr,yr;
         xl = matched_features[i].first.keypoint.pt.x;
         yl = matched_features[i].first.keypoint.pt.y;
+        std::cout<<"x "<<xl<<" "<<"y "<<yl<<std::endl;
         xr = matched_features[i].second.keypoint.pt.x;
         yr = matched_features[i].second.keypoint.pt.y;
+        std::cout<<"x "<<xr<<" "<<"y "<<yr<<std::endl;
 
         px_distance = fabs(xl-xr);
         if(px_distance == 0){
@@ -214,6 +217,8 @@ FramepointVector VisualTriangulation::Generate3DCoordinates(MatchVector &matched
             continue;
         };
         camera_coordinates.z() = focal_length * baseline/px_distance;
+        std::cout<<"Debug : Depth "<<std::endl;
+        std::cout<<camera_coordinates.z()<<std::endl;
         double cx = camera_intrinsics.coeff(0,2);
         double cy = camera_intrinsics.coeff(1,2);
         double fx = camera_intrinsics.coeff(0,0);
