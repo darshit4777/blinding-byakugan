@@ -86,7 +86,7 @@ class VisualTracking{
      * @param T_w2c << Estimate of the pose of the camera in the world
      * @return Eigen::Matrix<double,4,6> 
      */
-    Eigen::Matrix<double,4,6> FindJacobian(Eigen::Vector3d& left_cam_coordinates,Eigen::Vector3d& right_cam_coordinates,Camera& camera_l,Camera& camera_r);
+    Eigen::Matrix<double,4,6> FindJacobian(Eigen::Vector3d& left_cam_coordinates,Eigen::Vector3d& right_cam_coordinates,Camera& camera_l,Camera& camera_r,double omega);
 
     /**
      * @brief Estimates the new pose after a change in motion by solving an optimization problem

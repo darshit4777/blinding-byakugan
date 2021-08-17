@@ -147,7 +147,7 @@ int VisualTracking::FindCorrespondences(FramepointVector &previous_frame,Framepo
     return correspondences;
 };
 
-Eigen::Matrix<double,4,6> VisualTracking::FindJacobian(Eigen::Vector3d& left_cam_coordinates,Eigen::Vector3d& right_cam_coordinates,Camera& camera_l,Camera& camera_r){
+Eigen::Matrix<double,4,6> VisualTracking::FindJacobian(Eigen::Vector3d& left_cam_coordinates,Eigen::Vector3d& right_cam_coordinates,Camera& camera_l,Camera& camera_r,double omega){
     Eigen::Matrix<double,4,6> J;
 
     Eigen::Matrix<double,2,3> left_projection_derivative, right_projection_derivative;
@@ -199,7 +199,7 @@ Eigen::Matrix<double,4,6> VisualTracking::FindJacobian(Eigen::Vector3d& left_cam
     hat_cam_coordinates(2,2) = 0.0;
 
     Eigen::Matrix<double,3,6> J_Transform;
-    J_Transform.block<3,3>(0,0) = identity3;
+    J_Transform.block<3,3>(0,0) = identity3 * omega;
     J_Transform.block<3,3>(0,3) = -hat_cam_coordinates;
 
     J.block<2,6>(0,0) = left_projection_derivative * J_Transform;
@@ -225,9 +225,9 @@ Eigen::Matrix<double,4,6> VisualTracking::FindJacobian(Eigen::Vector3d& left_cam
 Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSlamBase::Frame &frame_ptr){
     // Configuring the Optimization Problem
     const bool ignore_outliers = true;
-    const double kernel_maximum_error = 200;
-    const double close_depth = 5.0;
-    const double maximum_depth = 7.0;
+    const double kernel_maximum_error = 2000;
+    const double close_depth = 1.0;
+    const double maximum_depth = 10.0;
     const int number_of_iterations = 15;
     int damping_factor = 1;
     int point_count = frame_ptr.points.size();
@@ -285,7 +285,7 @@ Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSla
             rcam_pixels[1] = rcam_pixels[1]/rcam_pixels[2];
 
             if(lcam_pixels.hasNaN() || rcam_pixels.hasNaN()){
-                std::cout<<"Invalid pixles - NaN"<<std::endl;
+                std::cout<<"Invalid pixels - NaN"<<std::endl;
                 continue;
             };
 
@@ -314,20 +314,20 @@ Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSla
                 inlier_count++;
             };
             
-            // Calculate the jacobian
-            Eigen::Matrix<double,4,6> J = FindJacobian(p_caml,p_camr,frame_ptr.camera_l,frame_ptr.camera_r);
-            // Adjusting for points that are too close or too far
             if(p_caml[2] < close_depth ){
                 // Too close
                 omega = omega * fabs(close_depth - p_caml[2])/close_depth;
             }
             else{
-                omega = omega * fabs(maximum_depth - p_caml[2])/maximum_depth;
-                //disable contribution to translational error
-                Eigen::Matrix3d zeros;
-                zeros.setZero();
-                J.block<3,3>(0,0) = zeros;
+                omega = omega * std::min(maximum_depth/p_caml[2],1.0);
+                //omega = omega * fabs(maximum_depth - p_caml[2])/maximum_depth;
             };
+            double translation_factor = std::min(maximum_depth/p_caml[2],1.0);
+            // Calculate the jacobian
+            
+            Eigen::Matrix<double,4,6> J = FindJacobian(p_caml,p_camr,frame_ptr.camera_l,frame_ptr.camera_r,translation_factor);
+            // Adjusting for points that are too close or too far
+            
 
             //update H and b
             H += J.transpose()*omega*J;
@@ -341,8 +341,9 @@ Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSla
         Eigen::MatrixXd identity6;
         identity6.resize(6,6);
         identity6.setIdentity(); 
-        H = H + identity6;
-        dx = H.ldlt().solve(-b);
+        H = H + 2*identity6;
+        //dx = H.ldlt().solve(-b);
+        dx = H.fullPivLu().solve(-b);
         // dx ends up being a vector with the translation variables and the rotation angles
         // The rotation angles are most probably rodrigues angles
         
@@ -373,9 +374,9 @@ Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSla
 
         // Simplest way to assign a 3D rotation matrix
         dT.matrix().block<3,3>(0,0) = eigen_rot_matrix;
-        //std::cout<<"Debug : dT Matrix"<<std::endl;
-        //std::cout<<dT.matrix()<<std::endl;
-        frame_ptr.T_cam2world = dT*frame_ptr.T_cam2world;
+        std::cout<<"Debug : dT Matrix"<<std::endl;
+        std::cout<<dT.matrix()<<std::endl;
+        frame_ptr.T_cam2world = frame_ptr.T_cam2world*dT.inverse();
         frame_ptr.T_world2cam = frame_ptr.T_cam2world.inverse();
 
     };
