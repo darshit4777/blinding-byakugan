@@ -228,9 +228,17 @@ Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSla
     const double kernel_maximum_error = 2000;
     const double close_depth = 1.0;
     const double maximum_depth = 10.0;
-    const int number_of_iterations = 15;
+    const int number_of_iterations = 20;
     int damping_factor = 1;
     int point_count = frame_ptr.points.size();
+
+    double total_error = 0;
+    double previous_total_error = 0;
+    double error_delta = 1000;
+    double error_delta_previous = 1000;
+
+    std::cout<<"Debug : Initial Pose"<<std::endl;
+    std::cout<<frame_ptr.T_world2cam.matrix()<<std::endl;
 
     if(frame_correspondences == 0){
         std::cout<<"Debug : Warning : Motion cannot be estimated, no frame correspondences "<<std::endl; 
@@ -299,7 +307,6 @@ Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSla
             reproj_error[3] = fp.keypoint_r.keypoint.pt.y - rcam_pixels[1];
 
             const double error_squared = reproj_error.transpose()*reproj_error;
-            std::cout<<"Debug : Squared Error "<< error_squared<<std::endl;
             // Robustify the Kernel
             if(error_squared > kernel_maximum_error){
                 if(ignore_outliers){
@@ -328,6 +335,8 @@ Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSla
             Eigen::Matrix<double,4,6> J = FindJacobian(p_caml,p_camr,frame_ptr.camera_l,frame_ptr.camera_r,translation_factor);
             // Adjusting for points that are too close or too far
             
+            // Update the total error
+            total_error = std::sqrt(error_squared) + total_error;
 
             //update H and b
             H += J.transpose()*omega*J;
@@ -335,15 +344,20 @@ Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSla
 
         }
         //compute (Identity-damped) solution
+        error_delta_previous = error_delta;
+        error_delta = fabs(total_error - previous_total_error);
+        previous_total_error = total_error;
+
+        
         
         Eigen::VectorXd dx;
         dx.setZero();
         Eigen::MatrixXd identity6;
         identity6.resize(6,6);
         identity6.setIdentity(); 
-        H = H + 2*identity6;
-        //dx = H.ldlt().solve(-b);
-        dx = H.fullPivLu().solve(-b);
+        H = H + damping_factor * identity6;
+        dx = H.ldlt().solve(-b);
+        //dx = H.fullPivLu().solve(-b);
         // dx ends up being a vector with the translation variables and the rotation angles
         // The rotation angles are most probably rodrigues angles
         
@@ -374,10 +388,20 @@ Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSla
 
         // Simplest way to assign a 3D rotation matrix
         dT.matrix().block<3,3>(0,0) = eigen_rot_matrix;
-        std::cout<<"Debug : dT Matrix"<<std::endl;
-        std::cout<<dT.matrix()<<std::endl;
+        //std::cout<<"Debug : dT Matrix"<<std::endl;
+        //std::cout<<dT.matrix()<<std::endl;
         frame_ptr.T_cam2world = frame_ptr.T_cam2world*dT.inverse();
         frame_ptr.T_world2cam = frame_ptr.T_cam2world.inverse();
+
+        if(fabs(error_delta - error_delta_previous) < 10){
+            std::cout<<"Debug : Converged in "<<i<<" iterations"<<std::endl;
+
+            for(VisualSlamBase::Framepoint& fp : frame_ptr.points){
+                fp.world_coordinates = frame_ptr.T_world2cam * fp.camera_coordinates;
+            };
+
+            return frame_ptr.T_world2cam;
+        };
 
     };
     //std::cout<<"Debug : Inlier Count"<<std::endl;
@@ -432,11 +456,11 @@ Eigen::Transform<double,3,2> VisualTracking::CalculatePosePrediction(VisualSlamB
         double time_fraction = time_elapsed/state_jacobian.differential_interval;
         int iterations = 0;
         if(state_jacobian.differential_interval == 0){
-            iterations = 1;
+            iterations = 0;
         }
         else{
             iterations = std::max(int(time_elapsed/state_jacobian.differential_interval),0);
-            iterations = std::min(int(time_elapsed/state_jacobian.differential_interval),5);
+            iterations = std::min(int(time_elapsed/state_jacobian.differential_interval),0);
         };
 
         // Apply the transform
@@ -554,7 +578,7 @@ void VisualTracking::InitializeNode(){
         l_map.frames.push_back(frame);
         map.local_maps.push_back(l_map);
 
-        std::cout<<" Empty local map, new frame"<<std::endl;
+        std::cout<<"Empty local map, new frame"<<std::endl;
         return;
     }
     else{
@@ -627,7 +651,8 @@ void VisualTracking::InitializeNode(){
                 // The derivative is pre-calculated and available
             
                 VisualSlamBase::Frame* last_frame = GetCurrentFrame();
-                frame.T_world2cam = CalculatePosePrediction(last_frame);
+                //frame.T_world2cam = CalculatePosePrediction(last_frame);
+                frame.T_world2cam = last_frame->T_world2cam;
                 frame.T_cam2world = frame.T_world2cam.inverse();
                 for(VisualSlamBase::Framepoint& framepoint : frame.points){
                     framepoint.world_coordinates = frame.T_world2cam*framepoint.camera_coordinates;
