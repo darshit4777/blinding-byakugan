@@ -357,11 +357,16 @@ void PoseOptimizer::OptimizeOnce(){
         ComputeError(fp);
         Linearize(fp);
     };
-
     Solve();
     return;
 }
 
 void PoseOptimizer::Converge(){
+
+    // We create convergence and solving criteria here
     return;
-}
+};
+
+PoseOptimizer::~PoseOptimizer(){
+    return;
+};

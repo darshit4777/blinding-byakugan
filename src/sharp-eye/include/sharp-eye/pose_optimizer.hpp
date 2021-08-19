@@ -64,6 +64,8 @@ class PoseOptimizer{
      */
     PoseOptimizer();
 
+    ~PoseOptimizer();
+
     /**
      * @brief Initializes all the pose optimizer variables
      * 
