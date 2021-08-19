@@ -62,11 +62,11 @@ int VisualTracking::FindCorrespondences(FramepointVector &previous_frame,Framepo
         int id_current = 0;
         std::vector<int> match_shortlist; // Framepoints found in the rectangular search region
         int ymin,ymax,xmin,xmax;
-        ymin = std::max(int(query_framepoint.keypoint_l.keypoint.pt.y - 25),0);
-        ymax = std::min(int(query_framepoint.keypoint_l.keypoint.pt.y + 25),img_height);
+        ymin = std::max(int(query_framepoint.keypoint_l.keypoint.pt.y - 50),0);
+        ymax = std::min(int(query_framepoint.keypoint_l.keypoint.pt.y + 50),img_height);
 
-        xmin = std::max(int(query_framepoint.keypoint_l.keypoint.pt.x - 25),0);
-        xmax = std::min(int(query_framepoint.keypoint_l.keypoint.pt.x + 25),img_width);
+        xmin = std::max(int(query_framepoint.keypoint_l.keypoint.pt.x - 50),0);
+        xmax = std::min(int(query_framepoint.keypoint_l.keypoint.pt.x + 50),img_width);
         
         // Loop to search for the top of the rectangular region
         while(current_frame[id_current].keypoint_l.keypoint.pt.y < ymin){
@@ -225,20 +225,11 @@ Eigen::Matrix<double,4,6> VisualTracking::FindJacobian(Eigen::Vector3d& left_cam
 Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSlamBase::Frame &frame_ptr){
     // Configuring the Optimization Problem
     const bool ignore_outliers = true;
-    const double kernel_maximum_error = 2000;
-    const double close_depth = 1.0;
+    const double kernel_maximum_error = 50;
+    const double close_depth = 0.5;
     const double maximum_depth = 10.0;
-    const int number_of_iterations = 20;
-    int damping_factor = 1;
+    const int number_of_iterations = 1000;
     int point_count = frame_ptr.points.size();
-
-    double total_error = 0;
-    double previous_total_error = 0;
-    double error_delta = 1000;
-    double error_delta_previous = 1000;
-
-    std::cout<<"Debug : Initial Pose"<<std::endl;
-    std::cout<<frame_ptr.T_world2cam.matrix()<<std::endl;
 
     if(frame_correspondences == 0){
         std::cout<<"Debug : Warning : Motion cannot be estimated, no frame correspondences "<<std::endl; 
@@ -246,9 +237,13 @@ Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSla
     };
     int inlier_count = 0;
 
+    Eigen::Transform<double,3,2> T_prev2curr;
+    T_prev2curr.setIdentity();
+
+
     for (int i = 0; i < number_of_iterations; i++) {
         //Initialize least squares components
-        
+        double total_error = 0;    
         Eigen::Matrix<double,6,6> H; //< Hessian
         H.setZero();
         
@@ -268,8 +263,19 @@ Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSla
             // Transforming the corresponding points from the previous frame to current
             // frame camera coordinates
             
-            Eigen::Vector3d p_caml = frame_ptr.T_cam2world*fp.previous->world_coordinates;
-            Eigen::Vector3d p_camr = this->T_caml2camr.inverse()*p_caml;
+            //Eigen::Vector3d p_caml = frame_ptr.T_cam2world*fp.previous->world_coordinates;
+            //Eigen::Vector3d p_camr = this->T_caml2camr.inverse()*p_caml;
+            
+            Eigen::Vector3d p_caml = T_prev2curr*fp.previous->camera_coordinates;
+            Eigen::Vector3d p_camr = T_prev2curr*fp.previous->camera_coordinates;
+            p_camr.x() = p_camr.x() - 0.110074;
+
+            //if (fp.previous->landmark_set){
+            //    p_caml = frame_ptr.T_cam2world * fp.previous->associated_landmark->world_coordinates;
+            //    //increase weight for landmarks
+            //    omega = 1.2 * omega;
+            //    p_camr = this->T_caml2camr.inverse()*p_caml;
+            //};
 
             // Checking coordinates for invalid values
             if(HasInf(p_caml) || HasInf(p_camr)){
@@ -297,6 +303,12 @@ Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSla
                 continue;
             };
 
+            if(rcam_pixels[0] < 0 || rcam_pixels[1] < 0){
+                continue;
+            }
+            if(lcam_pixels[0] < 0 || lcam_pixels[1] < 0){
+                continue;
+            }
 
             // Calculating Reprojection Error
             Eigen::Vector4d reproj_error;
@@ -317,23 +329,29 @@ Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSla
                 }
             }
             else{
-                fp.inlier = true;
-                inlier_count++;
+                std::cout<<"Debug : Inlier Error"<<std::endl;
+                std::cout<<error_squared<<std::endl;
+                if(!fp.inlier){
+                    fp.inlier = true;
+                    inlier_count++;
+                }
+                
             };
             
+            double translation_factor = 1.0;
             if(p_caml[2] < close_depth ){
                 // Too close
-                omega = omega * fabs(close_depth - p_caml[2])/close_depth;
+                //omega = omega * fabs(close_depth - p_caml[2])/close_depth;
+                continue;
             }
             else{
                 omega = omega * std::min(maximum_depth/p_caml[2],1.0);
+                translation_factor = std::min(maximum_depth/p_caml[2],1.0);
                 //omega = omega * fabs(maximum_depth - p_caml[2])/maximum_depth;
             };
-            double translation_factor = std::min(maximum_depth/p_caml[2],1.0);
-            // Calculate the jacobian
             
+            // Calculate the jacobian
             Eigen::Matrix<double,4,6> J = FindJacobian(p_caml,p_camr,frame_ptr.camera_l,frame_ptr.camera_r,translation_factor);
-            // Adjusting for points that are too close or too far
             
             // Update the total error
             total_error = std::sqrt(error_squared) + total_error;
@@ -343,74 +361,102 @@ Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSla
             b += J.transpose()*omega*reproj_error;
 
         }
-        //compute (Identity-damped) solution
-        error_delta_previous = error_delta;
-        error_delta = fabs(total_error - previous_total_error);
-        previous_total_error = total_error;
+        //compute (Identity-damped) solution        
 
-        
-        
         Eigen::VectorXd dx;
         dx.setZero();
         Eigen::MatrixXd identity6;
         identity6.resize(6,6);
-        identity6.setIdentity(); 
+        identity6.setIdentity();
+        double damping_factor = frame_correspondences * 1;
         H = H + damping_factor * identity6;
         dx = H.ldlt().solve(-b);
         //dx = H.fullPivLu().solve(-b);
+
         // dx ends up being a vector with the translation variables and the rotation angles
-        // The rotation angles are most probably rodrigues angles
+        // The rotation angles are a normalized quaternion
         
         Eigen::Transform<double,3,2> dT;
         dT.translation().x() = dx[0];
         dT.translation().y() = dx[1];
         dT.translation().z() = dx[2];
         
-        // The angles are in the form of rodrigues angels 
-        std::vector<double> rvec;
-        rvec.push_back(dx[3]);
-        rvec.push_back(dx[4]);
-        rvec.push_back(dx[5]);
-        cv::Mat rotation_matrix;
-        Eigen::Matrix3d eigen_rot_matrix;
-        cv::Rodrigues(rvec,rotation_matrix);
-
-        // Now converting the rotation matrix to Eigen Matrix
-        eigen_rot_matrix(0,0) = rotation_matrix.at<double>(0,0);
-        eigen_rot_matrix(0,1) = rotation_matrix.at<double>(0,1);
-        eigen_rot_matrix(0,2) = rotation_matrix.at<double>(0,2);
-        eigen_rot_matrix(1,0) = rotation_matrix.at<double>(1,0);
-        eigen_rot_matrix(1,1) = rotation_matrix.at<double>(1,1);
-        eigen_rot_matrix(1,2) = rotation_matrix.at<double>(1,2);
-        eigen_rot_matrix(2,0) = rotation_matrix.at<double>(2,0);
-        eigen_rot_matrix(2,1) = rotation_matrix.at<double>(2,1);
-        eigen_rot_matrix(2,2) = rotation_matrix.at<double>(2,2);
-
-        // Simplest way to assign a 3D rotation matrix
-        dT.matrix().block<3,3>(0,0) = eigen_rot_matrix;
-        //std::cout<<"Debug : dT Matrix"<<std::endl;
-        //std::cout<<dT.matrix()<<std::endl;
-        frame_ptr.T_cam2world = frame_ptr.T_cam2world*dT.inverse();
-        frame_ptr.T_world2cam = frame_ptr.T_cam2world.inverse();
-
-        if(fabs(error_delta - error_delta_previous) < 10){
-            std::cout<<"Debug : Converged in "<<i<<" iterations"<<std::endl;
-
-            for(VisualSlamBase::Framepoint& fp : frame_ptr.points){
-                fp.world_coordinates = frame_ptr.T_world2cam * fp.camera_coordinates;
-            };
-
-            return frame_ptr.T_world2cam;
+        // The angles are in the form of normalized quaternion 
+        Eigen::Vector3d nquaternion;
+        nquaternion.x() = dx[3];
+        nquaternion.y() = dx[4];
+        nquaternion.z() = dx[5];
+        double n = nquaternion.squaredNorm();
+        Eigen::Matrix3d rot_matrix;
+        if(n > 1){
+            rot_matrix.setIdentity();
+        }
+        else{
+            double w = sqrt(1 - n);
+            Eigen::Quaterniond q(w,nquaternion.x(),nquaternion.y(),nquaternion.z());
+            rot_matrix =  q.toRotationMatrix();
         };
 
-    };
-    //std::cout<<"Debug : Inlier Count"<<std::endl;
-    //std::cout<<inlier_count<<std::endl;
+        // Simplest way to assign a 3D rotation matrix
+        dT.matrix().block<3,3>(0,0) = rot_matrix;
+        
+        //frame_ptr.T_cam2world = frame_ptr.T_cam2world*dT.inverse();
+        //frame_ptr.T_world2cam = frame_ptr.T_cam2world.inverse();
 
-    //frame_ptr.T_cam2world = frame_ptr.T_world2cam.inverse();
-    for(VisualSlamBase::Framepoint& fp : frame_ptr.points){
-            fp.world_coordinates = frame_ptr.T_world2cam * fp.camera_coordinates;
-    }
+        T_prev2curr = dT * T_prev2curr;
+        //std::cout<<"Debug : New T_prev2curr"<<std::endl;
+        //std::cout<<T_prev2curr.matrix()<<std::endl;
+
+        // Convergence condition
+        //if(total_error < 200){
+        //    std::cout<<"Debug : Converged in "<<i<<" iterations"<<std::endl;
+
+        //    for(VisualSlamBase::Framepoint& fp : frame_ptr.points){
+        //        fp.world_coordinates = frame_ptr.T_world2cam * fp.camera_coordinates;
+
+        //        // Now the pose is refined - let us make them into landmarks
+        //        
+        //        if(fp.inlier && (!fp.landmark_set)){
+        //            VisualSlamBase::Landmark landmark;
+        //            // Storing the landmark in the current local map 
+        //            int current_lmap_idx = map.local_maps.size() - 1;
+        //            VisualSlamBase::LocalMap* lmap_ptr;
+        //            lmap_ptr = &map.local_maps[current_lmap_idx];
+        //            lmap_ptr->associated_landmarks.push_back(landmark);
+        //            
+        //            // Now working with a landmark pointer once the stack pointer is assigned
+        //            VisualSlamBase::Landmark* landmark_ptr = &lmap_ptr->associated_landmarks.back();
+        //            landmark_ptr->world_coordinates = fp.world_coordinates;
+        //            landmark_ptr->origin = boost::make_shared<VisualSlamBase::Framepoint>(fp);
+        //            fp.associated_landmark = boost::make_shared<VisualSlamBase::Landmark>(*landmark_ptr);
+        //            fp.landmark_set = true;
+        //        };
+        //    };
+        //    return frame_ptr.T_world2cam;
+        //};
+    };
+    frame_ptr.T_cam2world = frame_ptr.T_cam2world * T_prev2curr.inverse();
+    frame_ptr.T_world2cam = frame_ptr.T_cam2world.inverse();
+
+    //for(VisualSlamBase::Framepoint& fp : frame_ptr.points){
+    //        fp.world_coordinates = frame_ptr.T_world2cam * fp.camera_coordinates;
+    //        // Now the pose is refined - let us make them into landmarks
+    //        if(fp.inlier && !fp.landmark_set){
+    //            VisualSlamBase::Landmark landmark;
+    //            // Storing the landmark in the current local map 
+    //            int current_lmap_idx = map.local_maps.size() - 1;
+    //            VisualSlamBase::LocalMap* lmap_ptr;
+    //            lmap_ptr = &map.local_maps[current_lmap_idx];
+    //            lmap_ptr->associated_landmarks.push_back(landmark);
+    //            
+    //            // Now working with a landmark pointer once the stack pointer is assigned
+    //            VisualSlamBase::Landmark* landmark_ptr = &lmap_ptr->associated_landmarks.back();
+    //            landmark_ptr->world_coordinates = fp.world_coordinates;
+    //            landmark_ptr->origin = boost::make_shared<VisualSlamBase::Framepoint>(fp);
+    //            fp.associated_landmark = boost::make_shared<VisualSlamBase::Landmark>(*landmark_ptr);
+    //            fp.landmark_set = true;
+    //        };
+    //};
 
     return frame_ptr.T_world2cam;
 };
@@ -562,6 +608,7 @@ void VisualTracking::InitializeNode(){
         frame.points = framepoint_vec;
         for(VisualSlamBase::Framepoint& framepoint : frame.points){
             framepoint.world_coordinates = framepoint.camera_coordinates;
+            framepoint.landmark_set = false;
         };
         // TODO : what if the framepoint vector is empty ? 
         frame.camera_l = camera_left;
@@ -640,6 +687,7 @@ void VisualTracking::InitializeNode(){
             // Setting the frame world coordinates
             for(VisualSlamBase::Framepoint& framepoint : frame.points){
                 framepoint.world_coordinates = frame.T_world2cam * framepoint.camera_coordinates;
+                framepoint.landmark_set = false;
             };
             l_map_new.frames.push_back(frame);
             map.local_maps.push_back(l_map_new);
@@ -656,6 +704,7 @@ void VisualTracking::InitializeNode(){
                 frame.T_cam2world = frame.T_world2cam.inverse();
                 for(VisualSlamBase::Framepoint& framepoint : frame.points){
                     framepoint.world_coordinates = frame.T_world2cam*framepoint.camera_coordinates;
+                    framepoint.landmark_set = false;
                 };
                 std::cout<<"Pose Prediction applied"<<std::endl;
             }
@@ -669,6 +718,7 @@ void VisualTracking::InitializeNode(){
 
                 for(VisualSlamBase::Framepoint& framepoint : frame.points){
                     framepoint.world_coordinates = frame.T_world2cam * framepoint.camera_coordinates;
+                    framepoint.landmark_set = false;
                 };
                 std::cout<<"Pose Prediction Not applied"<<std::endl;
             }

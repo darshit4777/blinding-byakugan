@@ -27,13 +27,14 @@ class VisualSlamBase{
        boost::shared_ptr<Framepoint> next,previous;
     
        bool inlier;
-       Landmark *associated_landmark;
+       boost::shared_ptr<Landmark> associated_landmark;
+       bool landmark_set;
    };
 
    struct Landmark{
        // Landmark hold the information of multiple framepoints and their world location
        Eigen::Vector3d world_coordinates;
-       Framepoint *origin;
+       boost::shared_ptr<Framepoint> origin;
        Eigen::Matrix3d omega;
        Eigen::Vector3d nu;
    };
