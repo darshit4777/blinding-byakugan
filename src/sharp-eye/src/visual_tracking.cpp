@@ -24,6 +24,9 @@ VisualTracking::VisualTracking(Camera &cam_left,Camera &cam_right){
     InitializeWorldMap();
     InitializeStateJacobian();
 
+    // Optimizer
+    optimizer = new PoseOptimizer;
+
     std::cout<<"Visual Tracking Initialized"<<std::endl;  
 };
 
@@ -223,7 +226,15 @@ Eigen::Matrix<double,4,6> VisualTracking::FindJacobian(Eigen::Vector3d& left_cam
 };
 
 Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSlamBase::Frame &frame_ptr){
+    VisualSlamBase::Frame* previous_frame_ptr = GetCurrentFrame();
+    optimizer->Initialize(&frame_ptr,previous_frame_ptr);
 
+    optimizer->OptimizeOnce();
+    std::cout<<"Debug : Inliers"<<std::endl;
+    std::cout<<optimizer->inliers<<std::endl;
+
+    optimizer->Converge();
+    
     return frame_ptr.T_world2cam;
 };
 

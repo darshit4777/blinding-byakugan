@@ -364,9 +364,39 @@ void PoseOptimizer::OptimizeOnce(){
 void PoseOptimizer::Converge(){
 
     // We create convergence and solving criteria here
+    double previous_error = 0;
+    double error_delta = 0;
+    for(int i =0; i<parameters.max_iterations; i++){
+    //TODO : This needs work
+        OptimizeOnce();
+        error_delta = iteration_error - previous_error;
+        previous_error = iteration_error;
+
+        if((error_delta < 1) && (total_error < 100)){
+            Update();
+            return;
+        }
+
+    };
+    Update();
     return;
 };
 
 PoseOptimizer::~PoseOptimizer(){
     return;
+};
+void PoseOptimizer::VisualizeFramepoint(VisualSlamBase::Framepoint fp,cv::Mat& image){
+    /**
+     * @brief Draw a single framepoint on an image
+     * 
+     */
+
+    cv::KeyPoint keypoint;
+    keypoint = fp.keypoint_l.keypoint;
+
+    std::vector<cv::KeyPoint> keypoint_vec;
+    keypoint_vec.push_back(keypoint);
+    cv::drawKeypoints(image,keypoint_vec,cv::Scalar::all(-1),cv::DrawMatchesFlags::DRAW_OVER_OUTIMG);
+
+    return;   
 };

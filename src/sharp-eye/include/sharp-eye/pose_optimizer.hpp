@@ -85,6 +85,33 @@ class PoseOptimizer{
      */
     void Converge();
 
+    /**
+     * @brief Visualization function to draw a framepoint on an image
+     * 
+     * @param image 
+     */
+    void VisualizeFramepoint(VisualSlamBase::Framepoint fp,cv::Mat& image);
+
+    /**
+     * @brief Compare Framepoints drawn on two images. Useful for checking correspondences
+     * 
+     * @param fp_1 
+     * @param image_1 
+     * @param fp_2 
+     * @param image_2 
+     */
+    void VisualizeFramepointComparision(VisualSlamBase::Framepoint fp_1,cv::Mat& image_1,VisualSlamBase::Framepoint fp_2,cv::Mat& image_2);
+
+    /**
+     * @brief Visualize two groups of framepoints in a single image, useful for seeing
+     * optimization convergence
+     * 
+     * @param fp_1 
+     * @param fp_2 
+     * @param image 
+     */
+    void VisualizeMultiFramepointComparision(FramepointVector fp_1,FramepointVector fp_2,cv::Mat image);
+
     private:
     /**
      * @brief Extracts the camera coordinates from previous frame

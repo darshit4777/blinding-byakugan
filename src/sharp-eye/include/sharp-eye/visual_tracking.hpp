@@ -1,5 +1,6 @@
 #pragma once
 #include <sharp-eye/visual_slam_base.hpp>
+#include<sharp-eye/pose_optimizer.hpp>
 #include <chrono>
 typedef std::vector<VisualSlamBase::KeypointWD> FeatureVector;
 typedef std::vector<VisualSlamBase::Framepoint> FramepointVector;
@@ -45,6 +46,9 @@ class VisualTracking{
 
     // Correspondences
     int frame_correspondences;
+
+    // Pose optimizer
+    PoseOptimizer* optimizer;
 
     struct ManifoldDerivative{
         Eigen::Transform<double,3,2> deltaT;
