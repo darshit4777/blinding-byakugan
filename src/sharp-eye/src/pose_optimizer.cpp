@@ -1,4 +1,7 @@
 #include <sharp-eye/pose_optimizer.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/core.hpp>
 
 typedef std::vector<VisualSlamBase::KeypointWD> FeatureVector;
 typedef std::vector<VisualSlamBase::Framepoint> FramepointVector;
@@ -36,13 +39,20 @@ PoseOptimizer::PoseOptimizer(){
     total_error = 0;
     reproj_error.setZero();
 
+    // Initializing CV Window Strings
+    left_cam = "Left Cam Window";
+    right_cam = "Right Cam Window";
+
+    // Creating named windows
+    cv::namedWindow(left_cam,cv::WindowFlags::WINDOW_AUTOSIZE);
+    cv::namedWindow(right_cam,cv::WindowFlags::WINDOW_AUTOSIZE);
+
     std::cout<<"Pose Optimizer Initialized"<<std::endl;
     return;
 };
 
 void PoseOptimizer::Initialize(VisualSlamBase::Frame* current_frame_ptr,VisualSlamBase::Frame* previous_frame_ptr){
     // This needs to be called once before the OptimizeOnce can be used
-
 
     // No of measurements
     measurements = 0;
@@ -383,20 +393,42 @@ void PoseOptimizer::Converge(){
 };
 
 PoseOptimizer::~PoseOptimizer(){
+    cv::destroyAllWindows();
     return;
 };
-void PoseOptimizer::VisualizeFramepoint(VisualSlamBase::Framepoint fp,cv::Mat& image){
+void PoseOptimizer::VisualizeFramepoints(FramepointVector fp_vec,cv::Mat& image,int cam,cv::Scalar color = cv::Scalar(0,0,255)){
     /**
-     * @brief Draw a single framepoint on an image
+     * @brief Draw framepoints on an image
      * 
      */
+    // Convert the image into a RGB image
+    // create 8bit color image. IMPORTANT: initialize image otherwise it will result in 32F
+    cv::Mat img_rgb(image.size(), CV_8UC3);
 
-    cv::KeyPoint keypoint;
-    keypoint = fp.keypoint_l.keypoint;
+    // convert grayscale to color image
+    cv::cvtColor(image, img_rgb, CV_GRAY2RGB);
+    
+    //keypoint = fp.keypoint_l.keypoint;
 
-    std::vector<cv::KeyPoint> keypoint_vec;
-    keypoint_vec.push_back(keypoint);
-    cv::drawKeypoints(image,keypoint_vec,cv::Scalar::all(-1),cv::DrawMatchesFlags::DRAW_OVER_OUTIMG);
+    for(VisualSlamBase::Framepoint& fp : fp_vec){
+        cv::KeyPoint keypoint;
+        if(cam == 0){
+            keypoint = fp.keypoint_l.keypoint;
+        }
+        else if (cam == 1)
+        {
+            keypoint = fp.keypoint_r.keypoint;
+        }
+        // Draws a blue cirle on the image
+        cv::circle(img_rgb,keypoint.pt,3,color,CV_FILLED);
+    };
 
+    if(cam == 0){
+        cv::imshow(left_cam,img_rgb);
+    }
+    else if (cam == 1){
+        cv::imshow(right_cam,img_rgb);
+    };
     return;   
 };
+

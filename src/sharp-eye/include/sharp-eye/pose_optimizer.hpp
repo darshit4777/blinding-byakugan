@@ -58,6 +58,9 @@ class PoseOptimizer{
     // Camera Coordinates
     Eigen::Vector3d p_caml,p_camr;
 
+    // Opencv Named Windows
+    std::string left_cam; 
+    std::string right_cam;
     /**
      * @brief Creates a pose optimizer object and initializes all parameters
      * 
@@ -90,7 +93,7 @@ class PoseOptimizer{
      * 
      * @param image 
      */
-    void VisualizeFramepoint(VisualSlamBase::Framepoint fp,cv::Mat& image);
+    void VisualizeFramepoints(FramepointVector fp_vec,cv::Mat& image,int cam,cv::Scalar color);
 
     /**
      * @brief Compare Framepoints drawn on two images. Useful for checking correspondences
@@ -100,7 +103,7 @@ class PoseOptimizer{
      * @param fp_2 
      * @param image_2 
      */
-    void VisualizeFramepointComparision(VisualSlamBase::Framepoint fp_1,cv::Mat& image_1,VisualSlamBase::Framepoint fp_2,cv::Mat& image_2);
+    void VisualizeFramepointComparision(FramepointVector fp__vec1,cv::Mat& image_1,VisualSlamBase::Framepoint fp_vec2,cv::Mat& image_2);
 
     /**
      * @brief Visualize two groups of framepoints in a single image, useful for seeing
@@ -110,7 +113,7 @@ class PoseOptimizer{
      * @param fp_2 
      * @param image 
      */
-    void VisualizeMultiFramepointComparision(FramepointVector fp_1,FramepointVector fp_2,cv::Mat image);
+    void VisualizeMultiFramepointComparision(FramepointVector fp_vec1,FramepointVector fp_vec2,cv::Mat image);
 
     private:
     /**
