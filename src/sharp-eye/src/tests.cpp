@@ -401,6 +401,8 @@ class TestIncrementalMotion{
 
                 // Initialize a node
                 /// This step will initialize a new frame or local map.
+                tracking->img_l = image_l;
+                tracking->img_r = image_r;
                 tracking->InitializeNode();
 
                 // Perform tracking by estimating the new pose

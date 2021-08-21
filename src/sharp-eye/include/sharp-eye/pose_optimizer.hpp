@@ -62,8 +62,11 @@ class PoseOptimizer{
     std::string left_cam; 
     std::string right_cam;
 
+
     private:
     bool compute_success;
+    cv::Mat _img_left;
+    cv::Mat _img_right;
 
     public:
     /**
@@ -108,7 +111,7 @@ class PoseOptimizer{
      * @param fp_2 
      * @param image_2 
      */
-    void VisualizeFramepointComparision(FramepointVector fp__vec1,cv::Mat& image_1,VisualSlamBase::Framepoint fp_vec2,cv::Mat& image_2);
+    void VisualizeFramepointComparision(FramepointVector fp_vec1,cv::Mat& image_1,FramepointVector fp_vec2,cv::Mat& image_2);
 
     /**
      * @brief Visualize two groups of framepoints in a single image, useful for seeing

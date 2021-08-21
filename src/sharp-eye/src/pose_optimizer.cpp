@@ -15,7 +15,7 @@ PoseOptimizer::PoseOptimizer(){
     parameters.maximum_depth = 10.0;
     parameters.maximum_reliable_depth = 100.0;
     parameters.kernel_maximum_error = 300;
-    parameters.max_iterations = 100;
+    parameters.max_iterations = 20;
 
     parameters.min_correspondences = 200;
 
@@ -44,8 +44,8 @@ PoseOptimizer::PoseOptimizer(){
     right_cam = "Right Cam Window";
 
     // Creating named windows
-    //cv::namedWindow(left_cam,cv::WindowFlags::WINDOW_AUTOSIZE);
-    //cv::namedWindow(right_cam,cv::WindowFlags::WINDOW_AUTOSIZE);
+    cv::namedWindow(left_cam,cv::WindowFlags::WINDOW_AUTOSIZE);
+    cv::namedWindow(right_cam,cv::WindowFlags::WINDOW_AUTOSIZE);
 
     compute_success = false;
 
@@ -70,13 +70,12 @@ void PoseOptimizer::Initialize(VisualSlamBase::Frame* curr_frame_ptr,VisualSlamB
         }
     };
 
-    std::cout<<"Debug : Initial Pose"<<std::endl;
-    std::cout<<curr_frame_ptr->T_cam2world.matrix()<<std::endl;
     // Initializing the optimizer variables
     H.setZero();
     b.setZero();
     omega.setIdentity();
-    T_prev2curr = previous_frame_ptr->T_cam2world;
+    //T_prev2curr = previous_frame_ptr->T_cam2world;
+    T_prev2curr.setIdentity();
     inliers = 0;
     return;
 };
@@ -93,6 +92,12 @@ void PoseOptimizer::ComputeError(VisualSlamBase::Framepoint* fp){
         compute_success = false;
         return;
     }
+    
+    //std::vector<VisualSlamBase::Framepoint> fp_1,fp_2;
+    //fp_1.push_back(*fp);
+    //fp_2.push_back(*fp->previous);
+    //VisualizeFramepointComparision(fp_1,current_frame_ptr->image_l,fp_2,current_frame_ptr->image_l);
+    
     p_caml = T_prev2curr*fp->previous->camera_coordinates;
     p_camr = parameters.T_caml2camr.inverse() * p_caml;
     iteration_error = 0;
@@ -141,13 +146,30 @@ void PoseOptimizer::ComputeError(VisualSlamBase::Framepoint* fp){
         return;
     };
 
-    // Calculating Reprojection Error
-    reproj_error[0] = fp->keypoint_l.keypoint.pt.x - lcam_pixels[0];
-    reproj_error[1] = fp->keypoint_l.keypoint.pt.y - lcam_pixels[1];
+    // Drawing it on the images for visualization
+    
+    /// Drawing the fixed points
+    cv::circle(_img_left,fp->keypoint_l.keypoint.pt,3,cv::Scalar(255,0,0),CV_FILLED);
+    cv::circle(_img_right,fp->keypoint_r.keypoint.pt,3,cv::Scalar(255,0,0),CV_FILLED);
+    
+    /// Drawing the moving points
+    cv::Point2d l_point, r_point;
+    l_point.x = lcam_pixels[0];
+    l_point.y = lcam_pixels[1];
+    cv::circle(_img_left,l_point,3,cv::Scalar(0,0,255),CV_FILLED);
 
-    reproj_error[2] = fp->keypoint_r.keypoint.pt.x - rcam_pixels[0];
-    reproj_error[3] = fp->keypoint_r.keypoint.pt.y - rcam_pixels[1];
+    r_point.x = rcam_pixels[0];
+    r_point.y = rcam_pixels[1];
+    cv::circle(_img_right,r_point,3,cv::Scalar(0,0,255),CV_FILLED);
+    
 
+    // Calculating Reprojection Error - Order is important - (Sampled-Fixed)
+    reproj_error[0] = lcam_pixels[0] - fp->keypoint_l.keypoint.pt.x;
+    reproj_error[1] = lcam_pixels[1] - fp->keypoint_l.keypoint.pt.y;
+
+    reproj_error[2] = rcam_pixels[0] - fp->keypoint_r.keypoint.pt.x;
+    reproj_error[3] = rcam_pixels[1] - fp->keypoint_r.keypoint.pt.y;
+    
     const double error_squared = reproj_error.transpose()*reproj_error;
     iteration_error = error_squared;
     total_error = total_error + iteration_error;
@@ -317,6 +339,7 @@ void PoseOptimizer::Solve(){
     // The rotation angles are a normalized quaternion
         
     Eigen::Transform<double,3,2> dT;
+    dT.setIdentity();
     dT.translation().x() = dx[0];
     dT.translation().y() = dx[1];
     dT.translation().z() = dx[2];
@@ -384,11 +407,19 @@ void PoseOptimizer::OptimizeOnce(){
     omega.setIdentity();
     reproj_error.setZero();
     iteration_error = 0;
-
+    _img_left = cv::Mat(current_frame_ptr->image_l.size(),CV_8UC3);
+    _img_right = cv::Mat(current_frame_ptr->image_r.size(),CV_8UC3);
+    std::cout<<_img_right.size()<<std::endl;
+    std::cout<<_img_left.size()<<std::endl;
+    cv::cvtColor(current_frame_ptr->image_l,_img_left,CV_GRAY2BGR);   
+    cv::cvtColor(current_frame_ptr->image_r,_img_right,CV_GRAY2BGR);
     for(VisualSlamBase::Framepoint& fp : current_frame_ptr->points){
         ComputeError(&fp);
         Linearize(&fp);
     };
+    cv::imshow(left_cam,_img_left);
+    cv::imshow(right_cam,_img_right);
+    cv::waitKey(2000);
     Solve();
     return;
 }
@@ -455,3 +486,29 @@ void PoseOptimizer::VisualizeFramepoints(FramepointVector fp_vec,cv::Mat& image,
     return;   
 };
 
+void PoseOptimizer::VisualizeFramepointComparision(FramepointVector fp_vec1,cv::Mat& image_1,FramepointVector fp_vec2,cv::Mat& image_2){
+    
+    // Convert the images into a RGB image
+    // create 8bit color images. IMPORTANT: initialize image otherwise it will result in 32F
+    cv::Mat img_rgb1(image_1.size(), CV_8UC3);
+    cv::Mat img_rgb2(image_2.size(), CV_8UC3);
+    // convert grayscale to color image
+    cv::cvtColor(image_1, img_rgb1, CV_GRAY2RGB);
+    cv::cvtColor(image_2, img_rgb2, CV_GRAY2RGB);
+
+    for(VisualSlamBase::Framepoint& fp : fp_vec1){
+        cv::KeyPoint keypoint;
+        keypoint = fp.keypoint_l.keypoint;
+        cv::circle(img_rgb1,keypoint.pt,3,cv::Scalar(0,0,255),CV_FILLED);
+    };
+    for(VisualSlamBase::Framepoint& fp : fp_vec2){
+        cv::KeyPoint keypoint;
+        keypoint = fp.keypoint_l.keypoint;
+        cv::circle(img_rgb2,keypoint.pt,3,cv::Scalar(255,0,0),CV_FILLED);
+    };
+
+    cv::imshow(left_cam,img_rgb1);
+    cv::imshow(right_cam,img_rgb2);
+    cv::waitKey(1000);
+    return;
+}

@@ -232,7 +232,6 @@ Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSla
     optimizer->OptimizeOnce();
     std::cout<<"Debug : Inliers"<<std::endl;
     std::cout<<optimizer->inliers<<std::endl;
-
     optimizer->Converge();
     
     return frame_ptr.T_world2cam;
@@ -392,7 +391,7 @@ void VisualTracking::InitializeNode(){
         frame.camera_r = camera_right;
 
         frame.image_l = img_l;
-        frame.image_l = img_r;
+        frame.image_r = img_r;
 
         // Setting identity transforms for first frame
         frame.T_world2cam.setIdentity();
@@ -427,7 +426,7 @@ void VisualTracking::InitializeNode(){
         frame.camera_l = camera_left;
         frame.camera_r = camera_right;
         frame.image_l = img_l;
-        frame.image_l = img_r;
+        frame.image_r = img_r;
         // Now we check correspondences
         int current_frame_idx = current_lmap->frames.size() -1;
         int correspondences;
