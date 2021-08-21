@@ -14,8 +14,8 @@ PoseOptimizer::PoseOptimizer(){
     parameters.minimum_depth = 0.1;
     parameters.maximum_depth = 10.0;
     parameters.maximum_reliable_depth = 100.0;
-    parameters.kernel_maximum_error = 50;
-    parameters.max_iterations = 1000;
+    parameters.kernel_maximum_error = 300;
+    parameters.max_iterations = 100;
 
     parameters.min_correspondences = 200;
 
@@ -44,16 +44,21 @@ PoseOptimizer::PoseOptimizer(){
     right_cam = "Right Cam Window";
 
     // Creating named windows
-    cv::namedWindow(left_cam,cv::WindowFlags::WINDOW_AUTOSIZE);
-    cv::namedWindow(right_cam,cv::WindowFlags::WINDOW_AUTOSIZE);
+    //cv::namedWindow(left_cam,cv::WindowFlags::WINDOW_AUTOSIZE);
+    //cv::namedWindow(right_cam,cv::WindowFlags::WINDOW_AUTOSIZE);
+
+    compute_success = false;
 
     std::cout<<"Pose Optimizer Initialized"<<std::endl;
     return;
 };
 
-void PoseOptimizer::Initialize(VisualSlamBase::Frame* current_frame_ptr,VisualSlamBase::Frame* previous_frame_ptr){
+void PoseOptimizer::Initialize(VisualSlamBase::Frame* curr_frame_ptr,VisualSlamBase::Frame* prev_frame_ptr,VisualSlamBase::LocalMap* local_map_ptr){
     // This needs to be called once before the OptimizeOnce can be used
 
+    current_frame_ptr = curr_frame_ptr;
+    previous_frame_ptr = prev_frame_ptr;
+    lmap_ptr = local_map_ptr;
     // No of measurements
     measurements = 0;
     for(int i =0; i< current_frame_ptr->points.size(); i++){
@@ -65,16 +70,18 @@ void PoseOptimizer::Initialize(VisualSlamBase::Frame* current_frame_ptr,VisualSl
         }
     };
 
+    std::cout<<"Debug : Initial Pose"<<std::endl;
+    std::cout<<curr_frame_ptr->T_cam2world.matrix()<<std::endl;
     // Initializing the optimizer variables
     H.setZero();
     b.setZero();
     omega.setIdentity();
     T_prev2curr = previous_frame_ptr->T_cam2world;
-
+    inliers = 0;
     return;
 };
 
-void PoseOptimizer::ComputeError(VisualSlamBase::Framepoint& fp){
+void PoseOptimizer::ComputeError(VisualSlamBase::Framepoint* fp){
     /**
      * @brief Transforms the camera coordinates of points from the previous frame
      * to the current frame with an estimate of T_prev2curr. 
@@ -82,7 +89,11 @@ void PoseOptimizer::ComputeError(VisualSlamBase::Framepoint& fp){
      * 
     */
     
-    p_caml = T_prev2curr*fp.previous->camera_coordinates;
+    if(fp->previous == NULL){
+        compute_success = false;
+        return;
+    }
+    p_caml = T_prev2curr*fp->previous->camera_coordinates;
     p_camr = parameters.T_caml2camr.inverse() * p_caml;
     iteration_error = 0;
 
@@ -96,11 +107,13 @@ void PoseOptimizer::ComputeError(VisualSlamBase::Framepoint& fp){
     // Checking coordinates for invalid values
     if(HasInf(p_caml) || HasInf(p_camr)){
         std::cout<<"Invalid  Camera Points - INF"<<std::endl;
+        compute_success = false;
         return;
         
     }
     if(p_caml.hasNaN() || p_camr.hasNaN()){
         std::cout<<"Invalid  Camera Points - NaN"<<std::endl;
+        compute_success = false;
         return;
     };
 
@@ -116,26 +129,30 @@ void PoseOptimizer::ComputeError(VisualSlamBase::Framepoint& fp){
     
     if(lcam_pixels.hasNaN() || rcam_pixels.hasNaN()){
         std::cout<<"Invalid pixels - NaN"<<std::endl;
+        compute_success = false;
         return;
     };
     if(rcam_pixels[0] < 0 || rcam_pixels[1] < 0){
+        compute_success = false;
         return;
     };
     if(lcam_pixels[0] < 0 || lcam_pixels[1] < 0){
+        compute_success = false;
         return;
     };
 
     // Calculating Reprojection Error
-    reproj_error[0] = fp.keypoint_l.keypoint.pt.x - lcam_pixels[0];
-    reproj_error[1] = fp.keypoint_l.keypoint.pt.y - lcam_pixels[1];
+    reproj_error[0] = fp->keypoint_l.keypoint.pt.x - lcam_pixels[0];
+    reproj_error[1] = fp->keypoint_l.keypoint.pt.y - lcam_pixels[1];
 
-    reproj_error[2] = fp.keypoint_r.keypoint.pt.x - rcam_pixels[0];
-    reproj_error[3] = fp.keypoint_r.keypoint.pt.y - rcam_pixels[1];
+    reproj_error[2] = fp->keypoint_r.keypoint.pt.x - rcam_pixels[0];
+    reproj_error[3] = fp->keypoint_r.keypoint.pt.y - rcam_pixels[1];
 
     const double error_squared = reproj_error.transpose()*reproj_error;
     iteration_error = error_squared;
     total_error = total_error + iteration_error;
 
+    compute_success = true;
     return;
 };
 
@@ -154,7 +171,7 @@ bool PoseOptimizer::HasInf(Eigen::Vector3d vec){
     return false;
 };
 
-void PoseOptimizer::Linearize(VisualSlamBase::Framepoint& fp){
+void PoseOptimizer::Linearize(VisualSlamBase::Framepoint* fp){
     /**
      * @brief In this function we compute / update H, b and omega
      * 
@@ -164,6 +181,11 @@ void PoseOptimizer::Linearize(VisualSlamBase::Framepoint& fp){
 
     // Robustifying the Kernel 
     // If the reprojection error is too high, we proportionally reduce its weightage
+
+    if(!compute_success){
+        return;
+    };
+
     if(iteration_error > parameters.kernel_maximum_error){
         if(parameters.ignore_outliers){
             return;
@@ -173,8 +195,8 @@ void PoseOptimizer::Linearize(VisualSlamBase::Framepoint& fp){
         }
     }
     else{
-        if(!fp.inlier){
-            fp.inlier = true;
+        if(!fp->inlier){
+            fp->inlier = true;
             inliers++;
         };
         omega = omega * 1.1;
@@ -327,7 +349,7 @@ void PoseOptimizer::Update(){
      * @brief Updates the T_caml2world of the current frame
      * 
      */
-
+    
     // Update the pose
     current_frame_ptr->T_cam2world = previous_frame_ptr->T_cam2world * T_prev2curr.inverse();
     current_frame_ptr->T_world2cam = current_frame_ptr->T_cam2world.inverse();
@@ -364,8 +386,8 @@ void PoseOptimizer::OptimizeOnce(){
     iteration_error = 0;
 
     for(VisualSlamBase::Framepoint& fp : current_frame_ptr->points){
-        ComputeError(fp);
-        Linearize(fp);
+        ComputeError(&fp);
+        Linearize(&fp);
     };
     Solve();
     return;
@@ -383,6 +405,7 @@ void PoseOptimizer::Converge(){
         previous_error = iteration_error;
 
         if((error_delta < 1) && (total_error < 100)){
+            std::cout<<"Converged after "<<i<<" iterations"<<std::endl;
             Update();
             return;
         }

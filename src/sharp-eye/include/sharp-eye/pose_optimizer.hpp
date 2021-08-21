@@ -61,6 +61,11 @@ class PoseOptimizer{
     // Opencv Named Windows
     std::string left_cam; 
     std::string right_cam;
+
+    private:
+    bool compute_success;
+
+    public:
     /**
      * @brief Creates a pose optimizer object and initializes all parameters
      * 
@@ -73,7 +78,7 @@ class PoseOptimizer{
      * @brief Initializes all the pose optimizer variables
      * 
      */
-    void Initialize(VisualSlamBase::Frame* current_frame_ptr,VisualSlamBase::Frame* previous_frame_ptr);
+    void Initialize(VisualSlamBase::Frame* curr_frame_ptr,VisualSlamBase::Frame* prev_frame_ptr,VisualSlamBase::LocalMap* local_map_ptr);
 
     /**
      * @brief Runs the optimization loop once
@@ -121,13 +126,13 @@ class PoseOptimizer{
      * checks for invalid points and then computes the reprojection error
      * 
      */
-    void ComputeError(VisualSlamBase::Framepoint& fp);
+    void ComputeError(VisualSlamBase::Framepoint* fp);
     
     /**
      * @brief Assembles the H, b and omega matrices
      * 
      */
-    void Linearize(VisualSlamBase::Framepoint& fp);
+    void Linearize(VisualSlamBase::Framepoint* fp);
 
     /**
      * @brief Solves for Dx and transforms it into the SE3 form

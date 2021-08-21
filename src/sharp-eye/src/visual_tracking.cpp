@@ -227,8 +227,8 @@ Eigen::Matrix<double,4,6> VisualTracking::FindJacobian(Eigen::Vector3d& left_cam
 
 Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSlamBase::Frame &frame_ptr){
     VisualSlamBase::Frame* previous_frame_ptr = GetCurrentFrame();
-    optimizer->Initialize(&frame_ptr,previous_frame_ptr);
-
+    VisualSlamBase::LocalMap* lmap_ptr = &map.local_maps.back();
+    optimizer->Initialize(&frame_ptr,previous_frame_ptr,lmap_ptr);
     optimizer->OptimizeOnce();
     std::cout<<"Debug : Inliers"<<std::endl;
     std::cout<<optimizer->inliers<<std::endl;
