@@ -375,7 +375,7 @@ class TestIncrementalMotion{
 
         tracking = new VisualTracking(cam_left,cam_right);
         tracking->T_caml2camr = T_body2caml.inverse() * T_body2camr;
-
+        
         TestMain();
         return;
     };

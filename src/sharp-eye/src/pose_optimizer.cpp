@@ -14,7 +14,7 @@ PoseOptimizer::PoseOptimizer(){
     parameters.minimum_depth = 0.1;
     parameters.maximum_depth = 10.0;
     parameters.maximum_reliable_depth = 100.0;
-    parameters.kernel_maximum_error = 300;
+    parameters.kernel_maximum_error = 50;
     parameters.max_iterations = 20;
 
     parameters.min_correspondences = 200;
@@ -99,7 +99,8 @@ void PoseOptimizer::ComputeError(VisualSlamBase::Framepoint* fp){
     //VisualizeFramepointComparision(fp_1,current_frame_ptr->image_l,fp_2,current_frame_ptr->image_l);
     
     p_caml = T_prev2curr*fp->previous->camera_coordinates;
-    p_camr = parameters.T_caml2camr.inverse() * p_caml;
+    p_camr = T_prev2curr*parameters.T_caml2camr.inverse()*fp->previous->camera_coordinates;
+    //p_camr.x() = p_caml.x() - 0.110074;
     iteration_error = 0;
 
     //if (fp.previous->landmark_set){
@@ -131,6 +132,8 @@ void PoseOptimizer::ComputeError(VisualSlamBase::Framepoint* fp){
     rcam_pixels = current_frame_ptr->camera_r.intrinsics * p_camr;
     rcam_pixels[0] = rcam_pixels[0]/rcam_pixels[2];
     rcam_pixels[1] = rcam_pixels[1]/rcam_pixels[2];
+    //rcam_pixels[0] = lcam_pixels[0] - 457.95 * 0.11074/p_caml[2];
+    //rcam_pixels[1] = lcam_pixels[1] + 456.7145 * parameters.T_caml2camr.translation().y()/p_caml
     
     if(lcam_pixels.hasNaN() || rcam_pixels.hasNaN()){
         std::cout<<"Invalid pixels - NaN"<<std::endl;
@@ -169,7 +172,8 @@ void PoseOptimizer::ComputeError(VisualSlamBase::Framepoint* fp){
 
     reproj_error[2] = rcam_pixels[0] - fp->keypoint_r.keypoint.pt.x;
     reproj_error[3] = rcam_pixels[1] - fp->keypoint_r.keypoint.pt.y;
-    
+    //reproj_error[2] = 0.0;
+    //reproj_error[3] = 0.0;
     const double error_squared = reproj_error.transpose()*reproj_error;
     iteration_error = error_squared;
     total_error = total_error + iteration_error;

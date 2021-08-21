@@ -226,6 +226,7 @@ Eigen::Matrix<double,4,6> VisualTracking::FindJacobian(Eigen::Vector3d& left_cam
 };
 
 Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSlamBase::Frame &frame_ptr){
+    optimizer->parameters.T_caml2camr = T_caml2camr;
     VisualSlamBase::Frame* previous_frame_ptr = GetCurrentFrame();
     VisualSlamBase::LocalMap* lmap_ptr = &map.local_maps.back();
     optimizer->Initialize(&frame_ptr,previous_frame_ptr,lmap_ptr);
