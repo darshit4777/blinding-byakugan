@@ -141,8 +141,10 @@ int VisualTracking::FindCorrespondences(FramepointVector &previous_frame,Framepo
         
         // Assigning to each others previous and next
         int current_frame_idx = match_shortlist[good_matches[0].trainIdx];
-        query_framepoint.next = boost::make_shared<VisualSlamBase::Framepoint>( current_frame[current_frame_idx]);
-        current_frame[current_frame_idx].previous = boost::make_shared<VisualSlamBase::Framepoint>(query_framepoint);
+        query_framepoint.next = &current_frame[current_frame_idx];
+        current_frame[current_frame_idx].previous = &query_framepoint;
+        //query_framepoint.next = boost::make_shared<VisualSlamBase::Framepoint>( current_frame[current_frame_idx]);
+        //current_frame[current_frame_idx].previous = boost::make_shared<VisualSlamBase::Framepoint>(query_framepoint);
         correspondences++;
     };
 
@@ -231,8 +233,6 @@ Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSla
     VisualSlamBase::LocalMap* lmap_ptr = &map.local_maps.back();
     optimizer->Initialize(&frame_ptr,previous_frame_ptr,lmap_ptr);
     optimizer->OptimizeOnce();
-    std::cout<<"Debug : Inliers"<<std::endl;
-    std::cout<<optimizer->inliers<<std::endl;
     optimizer->Converge();
     
     return frame_ptr.T_world2cam;
@@ -386,6 +386,10 @@ void VisualTracking::InitializeNode(){
         for(VisualSlamBase::Framepoint& framepoint : frame.points){
             framepoint.world_coordinates = framepoint.camera_coordinates;
             framepoint.landmark_set = false;
+            framepoint.inlier = false;
+            framepoint.next = NULL;
+            framepoint.associated_landmark = NULL;
+
         };
         // TODO : what if the framepoint vector is empty ? 
         frame.camera_l = camera_left;
@@ -465,6 +469,9 @@ void VisualTracking::InitializeNode(){
             for(VisualSlamBase::Framepoint& framepoint : frame.points){
                 framepoint.world_coordinates = frame.T_world2cam * framepoint.camera_coordinates;
                 framepoint.landmark_set = false;
+                framepoint.inlier = false;
+                framepoint.next = NULL;
+                framepoint.associated_landmark = NULL;
             };
             l_map_new.frames.push_back(frame);
             map.local_maps.push_back(l_map_new);
@@ -482,6 +489,9 @@ void VisualTracking::InitializeNode(){
                 for(VisualSlamBase::Framepoint& framepoint : frame.points){
                     framepoint.world_coordinates = frame.T_world2cam*framepoint.camera_coordinates;
                     framepoint.landmark_set = false;
+                    framepoint.inlier = false;
+                    framepoint.next = NULL;
+                    framepoint.associated_landmark = NULL;
                 };
                 std::cout<<"Pose Prediction applied"<<std::endl;
             }
@@ -496,6 +506,9 @@ void VisualTracking::InitializeNode(){
                 for(VisualSlamBase::Framepoint& framepoint : frame.points){
                     framepoint.world_coordinates = frame.T_world2cam * framepoint.camera_coordinates;
                     framepoint.landmark_set = false;
+                    framepoint.inlier = false;
+                    framepoint.next = NULL;
+                    framepoint.associated_landmark = NULL;
                 };
                 std::cout<<"Pose Prediction Not applied"<<std::endl;
             }

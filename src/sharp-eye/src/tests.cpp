@@ -11,6 +11,7 @@
 #include <sensor_msgs/PointCloud.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <pcl_conversions/pcl_conversions.h>
+#include <nav_msgs/Odometry.h>
 /**
  * This file will create an executable which will serve as a test node and 
  * later on will be repurposed to form the ROS layer
@@ -321,7 +322,11 @@ class TestIncrementalMotion{
     FramepointVector framepoints;
     MatchVector matches;
     
-    TestIncrementalMotion(){
+    // ROS
+    ros::NodeHandle nodehandle;
+    ros::Publisher pose_publisher;
+    
+    TestIncrementalMotion(ros::NodeHandle& nh){
         // Initializing Camera Matrices
         cam_left.intrinsics << 458.654,     0.0,    367.215,
                                0.0, 457.296,    248.375,
@@ -375,8 +380,13 @@ class TestIncrementalMotion{
 
         tracking = new VisualTracking(cam_left,cam_right);
         tracking->T_caml2camr = T_body2caml.inverse() * T_body2camr;
-        
+
+        nodehandle = nh;
+        pose_publisher = nh.advertise<nav_msgs::Odometry>("/visual_odometry",10);
+
         TestMain();
+        delete tracking;
+        
         return;
     };
 
@@ -412,8 +422,11 @@ class TestIncrementalMotion{
                 current_frame = tracking->GetCurrentFrame();
                 
                 new_pose = tracking->EstimateIncrementalMotion(*current_frame);
-                std::cout<<"Debug : New Pose"<<std::endl;
-                std::cout<<new_pose.matrix()<<std::endl;
+                //std::cout<<"Debug : New Pose"<<std::endl;
+                //std::cout<<new_pose.matrix()<<std::endl;
+
+                PublishPose(new_pose);
+                
                 
                 // Calculate Motion Derivative
                 if(tracking->map.local_maps[0].frames.size() > 1){
@@ -454,6 +467,25 @@ class TestIncrementalMotion{
 
     };
 
+    void PublishPose(Eigen::Transform<double,3,2> pose){
+        nav_msgs::Odometry odom_msg;
+        odom_msg.child_frame_id = "base";
+        odom_msg.header.frame_id = "world";
+        odom_msg.pose.pose.position.x = pose.translation().x();
+        odom_msg.pose.pose.position.y = pose.translation().y();
+        odom_msg.pose.pose.position.z = pose.translation().z();
+
+        Eigen::Matrix3d rot_matrix = pose.rotation();
+        Eigen::Quaterniond q(rot_matrix);
+        odom_msg.pose.pose.orientation.x = q.x();
+        odom_msg.pose.pose.orientation.y = q.y();
+        odom_msg.pose.pose.orientation.z = q.z();
+        odom_msg.pose.pose.orientation.w = q.w();
+
+        pose_publisher.publish(odom_msg);
+        return;
+    }
+
 };
 
 
@@ -467,6 +499,6 @@ int main(int argc, char **argv){
     //TestGetMatchedKeypoints test;
     //TestGenerate3DCoordinates test(nh);
     //TestFindCorrespondences test;
-    TestIncrementalMotion test;
+    TestIncrementalMotion test(nh);
     return 0;
 }
