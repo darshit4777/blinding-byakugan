@@ -129,13 +129,13 @@ class PoseOptimizer{
      * checks for invalid points and then computes the reprojection error
      * 
      */
-    void ComputeError(VisualSlamBase::Framepoint* fp);
+    void ComputeError(VisualSlamBase::Framepoint fp);
     
     /**
      * @brief Assembles the H, b and omega matrices
      * 
      */
-    void Linearize(VisualSlamBase::Framepoint* fp);
+    void Linearize(VisualSlamBase::Framepoint fp);
 
     /**
      * @brief Solves for Dx and transforms it into the SE3 form

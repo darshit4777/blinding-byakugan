@@ -14,7 +14,7 @@ PoseOptimizer::PoseOptimizer(){
     parameters.minimum_depth = 0.1;
     parameters.maximum_depth = 10.0;
     parameters.maximum_reliable_depth = 100.0;
-    parameters.kernel_maximum_error = 5;
+    parameters.kernel_maximum_error = 50;
     parameters.max_iterations = 10;
 
     parameters.min_correspondences = 200;
@@ -80,7 +80,7 @@ void PoseOptimizer::Initialize(VisualSlamBase::Frame* curr_frame_ptr,VisualSlamB
     return;
 };
 
-void PoseOptimizer::ComputeError(VisualSlamBase::Framepoint* fp){
+void PoseOptimizer::ComputeError(VisualSlamBase::Framepoint fp){
     /**
      * @brief Transforms the camera coordinates of points from the previous frame
      * to the current frame with an estimate of T_prev2curr. 
@@ -88,7 +88,7 @@ void PoseOptimizer::ComputeError(VisualSlamBase::Framepoint* fp){
      * 
     */
     
-    if(fp->previous == NULL){
+    if(fp.previous == NULL){
         compute_success = false;
         return;
     }
@@ -98,8 +98,8 @@ void PoseOptimizer::ComputeError(VisualSlamBase::Framepoint* fp){
     //fp_2.push_back(*fp->previous);
     //VisualizeFramepointComparision(fp_1,current_frame_ptr->image_l,fp_2,current_frame_ptr->image_l);
     
-    p_caml = T_prev2curr*fp->previous->camera_coordinates;
-    p_camr = T_prev2curr*parameters.T_caml2camr.inverse()*fp->previous->camera_coordinates;
+    p_caml = T_prev2curr*fp.previous->camera_coordinates;
+    p_camr = T_prev2curr*parameters.T_caml2camr.inverse()*fp.previous->camera_coordinates;
 
     //if (fp.previous->landmark_set){
     //    p_caml = current_frame_ptr->T_cam2world * fp.previous->associated_landmark->world_coordinates;
@@ -144,13 +144,21 @@ void PoseOptimizer::ComputeError(VisualSlamBase::Framepoint* fp){
         compute_success = false;
         return;
     };
+    if(lcam_pixels[0] > 720 || lcam_pixels[1] > 480){
+        compute_success = false;
+        return;
+    };
+    if(rcam_pixels[0] > 720 || rcam_pixels[1] > 480){
+        compute_success = false;
+        return;
+    };
     
     // Calculating Reprojection Error - Order is important - (Sampled-Fixed)
-    reproj_error[0] = lcam_pixels[0] - fp->keypoint_l.keypoint.pt.x;
-    reproj_error[1] = lcam_pixels[1] - fp->keypoint_l.keypoint.pt.y;
+    reproj_error[0] = lcam_pixels[0] - fp.keypoint_l.keypoint.pt.x;
+    reproj_error[1] = lcam_pixels[1] - fp.keypoint_l.keypoint.pt.y;
 
-    reproj_error[2] = rcam_pixels[0] - fp->keypoint_r.keypoint.pt.x;
-    reproj_error[3] = rcam_pixels[1] - fp->keypoint_r.keypoint.pt.y;
+    reproj_error[2] = rcam_pixels[0] - fp.keypoint_r.keypoint.pt.x;
+    reproj_error[3] = rcam_pixels[1] - fp.keypoint_r.keypoint.pt.y;
     //reproj_error[2] = 0.0;
     //reproj_error[3] = 0.0;
     
@@ -193,7 +201,7 @@ bool PoseOptimizer::HasInf(Eigen::Vector3d vec){
     return false;
 };
 
-void PoseOptimizer::Linearize(VisualSlamBase::Framepoint* fp){
+void PoseOptimizer::Linearize(VisualSlamBase::Framepoint fp){
     /**
      * @brief In this function we compute / update H, b and omega
      * 
@@ -217,8 +225,8 @@ void PoseOptimizer::Linearize(VisualSlamBase::Framepoint* fp){
         }
     }
     else{
-        if(!fp->inlier){
-            fp->inlier = true;
+        if(!fp.inlier){
+            fp.inlier = true;
             inliers++;
         };
 
@@ -378,29 +386,29 @@ void PoseOptimizer::Update(){
     current_frame_ptr->T_world2cam = current_frame_ptr->T_cam2world.inverse();
 
     // Update the landmarks
-    for(VisualSlamBase::Framepoint& fp : current_frame_ptr->points){
-        fp.world_coordinates = current_frame_ptr->T_world2cam * fp.camera_coordinates;
-        // Now the pose is refined - let us make them into landmarks
-        if(fp.inlier && !fp.landmark_set){
-            
-            // Creating a new landmark
-            VisualSlamBase::Landmark landmark;
-            // Storing the landmark in the current local map
-            lmap_ptr->associated_landmarks.push_back(landmark);
-            
-            // Now working with a landmark pointer once the stack pointer is assigned
-            VisualSlamBase::Landmark* landmark_ptr = &lmap_ptr->associated_landmarks.back();
-            landmark_ptr->world_coordinates = fp.world_coordinates;
-            landmark_ptr->origin = &fp;
-            
-            fp.associated_landmark = landmark_ptr;
-            fp.landmark_set = true;
-        };
-    };
-
-    // The pose optimization is complete here - we relase the images from the previous frame
-    previous_frame_ptr->image_l.release();
-    previous_frame_ptr->image_r.release();
+    //for(VisualSlamBase::Framepoint& fp : current_frame_ptr->points){
+    //    fp.world_coordinates = current_frame_ptr->T_world2cam * fp.camera_coordinates;
+    //    // Now the pose is refined - let us make them into landmarks
+    //    if(fp.inlier && !fp.landmark_set){
+    //        
+    //        // Creating a new landmark
+    //        VisualSlamBase::Landmark landmark;
+    //        // Storing the landmark in the current local map
+    //        lmap_ptr->associated_landmarks.push_back(landmark);
+    //        
+    //        // Now working with a landmark pointer once the stack pointer is assigned
+    //        VisualSlamBase::Landmark* landmark_ptr = &lmap_ptr->associated_landmarks.back();
+    //        landmark_ptr->world_coordinates = fp.world_coordinates;
+    //        landmark_ptr->origin = &fp;
+    //        
+    //        fp.associated_landmark = landmark_ptr;
+    //        fp.landmark_set = true;
+    //    };
+    //};
+//
+    //// The pose optimization is complete here - we relase the images from the previous frame
+    //previous_frame_ptr->image_l.release();
+    //previous_frame_ptr->image_r.release();
     return;
 };
 
@@ -420,9 +428,9 @@ void PoseOptimizer::OptimizeOnce(){
     //cv::cvtColor(current_frame_ptr->image_l,_img_left,CV_GRAY2BGR);   
     //cv::cvtColor(current_frame_ptr->image_r,_img_right,CV_GRAY2BGR);
 
-    for(VisualSlamBase::Framepoint& fp : current_frame_ptr->points){
-        ComputeError(&fp);
-        Linearize(&fp);
+    for(VisualSlamBase::Framepoint fp : current_frame_ptr->points){
+        ComputeError(fp);
+        Linearize(fp);
     };
     std::cout<<"Debug : Inliers"<<std::endl;
     std::cout<<inliers<<std::endl;

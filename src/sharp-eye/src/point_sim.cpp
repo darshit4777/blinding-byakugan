@@ -20,8 +20,8 @@ void PointSim::SetCameraPositions(Eigen::Transform<double,3,2> camera_initial,Ei
 
 void PointSim::SetCameraPositionAndTransform(Eigen::Transform<double,3,2> camera_initial,Eigen::Transform<double,3,2> transform){
     T_world2cam1 = camera_initial;
-    T_cam12cam2 = transform;
-
+    //T_cam12cam2 = transform;
+    T_world2cam2 = T_world2cam1*T_cam12cam2;
     return;
 };
 
@@ -34,8 +34,7 @@ void PointSim::CreateRandomPoints(int no_of_points,double cube_dimension){
     for(int i = 0; i<n; i++){
         Eigen::Vector3d random_point;
         random_point.setRandom();
-        random_point = random_point * d/2;
-
+        random_point = random_point * d;
         point_list.push_back(random_point);
     };
 
@@ -75,49 +74,54 @@ void PointSim::CreateFrames(){
 
 
     for(auto point : point_list){
-        VisualSlamBase::Framepoint fp1,fp2;
+        VisualSlamBase::Framepoint* fp1 = new VisualSlamBase::Framepoint;
+        VisualSlamBase::Framepoint* fp2 = new VisualSlamBase::Framepoint;
 
         // Initialize
-        fp1.associated_landmark = NULL;
-        fp1.inlier = false;
-        fp1.landmark_set = false;
+        fp1->associated_landmark = NULL;
+        fp1->inlier = false;
+        fp1->landmark_set = false;
 
-        fp2.associated_landmark = NULL;
-        fp2.inlier = false;
-        fp2.landmark_set = false;
+        fp2->associated_landmark = NULL;
+        fp2->inlier = false;
+        fp2->landmark_set = false;
 
 
         // Assign world coordinates
-        fp1.world_coordinates = point;
+        fp1->world_coordinates = point;
+        std::cout<<point<<std::endl;
         
         // Assign Camera coordinates
-        fp1.camera_coordinates = T_world2cam1.inverse() * point;
-        fp2.camera_coordinates = T_world2cam2.inverse() * point;
+        fp1->camera_coordinates = T_world2cam1.inverse() * point;
+        fp2->camera_coordinates = T_world2cam2.inverse() * point;
 
         // Create left projections
-        fp1.keypoint_l.keypoint = ProjectPoints(fp1.camera_coordinates,camera_l);
-        fp2.keypoint_l.keypoint = ProjectPoints(fp2.camera_coordinates,camera_l);
+        fp1->keypoint_l.keypoint = ProjectPoints(fp1->camera_coordinates,camera_l);
+        fp2->keypoint_l.keypoint = ProjectPoints(fp2->camera_coordinates,camera_l);
 
         // Create right projection
         Eigen::Vector3d right_cam_coordinates_1,right_cam_coordinates_2;
-        right_cam_coordinates_1 = T_caml2camr.inverse() * fp1.camera_coordinates;
-        right_cam_coordinates_2 = T_caml2camr.inverse() * fp2.camera_coordinates;
+        right_cam_coordinates_1 = T_caml2camr.inverse() * fp1->camera_coordinates;
+        right_cam_coordinates_2 = T_caml2camr.inverse() * fp2->camera_coordinates;
 
-        fp1.keypoint_r.keypoint = ProjectPoints(right_cam_coordinates_1,camera_r);
-        fp2.keypoint_r.keypoint = ProjectPoints(right_cam_coordinates_2,camera_r);
+        fp1->keypoint_r.keypoint = ProjectPoints(right_cam_coordinates_1,camera_r);
+        fp2->keypoint_r.keypoint = ProjectPoints(right_cam_coordinates_2,camera_r);
         
         // Check if the projections or pixels are out of bounds - if they are remove
         /// Cam 1
-        if(InFieldOfView(fp1.keypoint_l.keypoint,fp1.keypoint_r.keypoint) && InFieldOfView(fp2.keypoint_l.keypoint,fp2.keypoint_r.keypoint)){
+        if(InFieldOfView(fp1->keypoint_l.keypoint,fp1->keypoint_r.keypoint) && InFieldOfView(fp2->keypoint_l.keypoint,fp2->keypoint_r.keypoint)){
             // If the points are in field of view then we assign them to their
             // respective frames
 
-            previous_frame.points.push_back(fp1);
-            current_frame.points.push_back(fp2);
+            fp1->next = fp2;
+            fp2->previous = fp1;
+            previous_frame.points.push_back(*fp1);
+            current_frame.points.push_back(*fp2);
 
-            // Now we assign the previous and next pointers - Simple right?
-            current_frame.points.back().previous = &previous_frame.points.back();
-            previous_frame.points.back().next = &current_frame.points.back();
+            //// Now we assign the previous and next pointers - Simple right?
+            //current_frame.points.back().previous = &previous_frame.points.back();
+            //previous_frame.points.back().next = &current_frame.points.back();
+        }
         else{
             continue;
         }
@@ -140,6 +144,9 @@ bool PointSim::InFieldOfView(cv::KeyPoint keypoint_l,cv::KeyPoint keypoint_r){
         return false;
     };
     return true;
-};    
+}; 
 
-   
+void PointSim::SetInterCameraTransform(Eigen::Transform<double,3,2> transform){
+    T_caml2camr = transform;
+    return;
+};

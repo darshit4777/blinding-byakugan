@@ -12,6 +12,7 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <nav_msgs/Odometry.h>
+#include <sharp-eye/point_sim.hpp>
 /**
  * This file will create an executable which will serve as a test node and 
  * later on will be repurposed to form the ROS layer
@@ -488,6 +489,80 @@ class TestIncrementalMotion{
 
 };
 
+class TestPoseOptimizer{
+    public:
+    PoseOptimizer* optimizer;
+    PointSim* point_sim;
+
+    TestPoseOptimizer(){
+        optimizer = new PoseOptimizer;
+        point_sim = new PointSim;
+
+        // Initializations
+        Camera cam_left, cam_right;
+        cam_left.intrinsics << 458.654,     0.0,    367.215,
+                               0.0, 457.296,    248.375,
+                               0.0,     0.0,        1.0;
+
+        cam_right.intrinsics << 457.587,        0.0, 379.999,
+                                    0.0,    456.134, 255.238,
+                                    0.05,        0.0,    1.0;
+
+        Eigen::Transform<double,3,2> T_caml2camr;
+
+        Eigen::Transform<double,3,2> T_body2caml,T_body2camr;
+        T_body2caml.matrix()<<   0.0148655429818, -0.999880929698, 0.00414029679422, -0.0216401454975,
+                                    0.999557249008, 0.0149672133247, 0.025715529948, -0.064676986768,
+                                -0.0257744366974, 0.00375618835797, 0.999660727178, 0.00981073058949,
+                                0.0, 0.0, 0.0, 1.0;
+
+        T_body2camr.matrix()<<  0.0125552670891, -0.999755099723, 0.0182237714554, -0.0198435579556,
+                                0.999598781151, 0.0130119051815, 0.0251588363115, 0.0453689425024,
+                                -0.0253898008918, 0.0179005838253, 0.999517347078, 0.00786212447038,
+                                0.0, 0.0, 0.0, 1.0;
+        T_caml2camr = T_body2caml.inverse() * T_body2camr;                                
+        point_sim->CreateCameras(cam_left,cam_right);
+        point_sim->SetInterCameraTransform(T_caml2camr);
+        point_sim->CreateRandomPoints(1,5);
+
+        // Creating camera poses
+        Eigen::Transform<double,3,2> T_world2cam1,T_world2cam2;
+        T_world2cam1.setIdentity();
+        T_world2cam1.translation().x() =0;
+        T_world2cam1.translation().y() =0;
+        T_world2cam1.translation().z() =-5.0; 
+        T_world2cam2.setIdentity();
+        T_world2cam2.translation().x() = 0.3;
+        T_world2cam2.translation().y() = -0.3;
+        T_world2cam2.translation().z() = -4.7;
+
+        point_sim->SetCameraPositions(T_world2cam1,T_world2cam2);
+        //point_sim->SetCameraPositionAndTransform(T_world2cam1,T_world2cam2);
+        point_sim->CreateFrames();
+        TestMain();
+        return;
+    };
+
+    void TestMain(){
+
+        optimizer->parameters.T_caml2camr = point_sim->T_caml2camr;
+        VisualSlamBase::LocalMap* lmap_ptr;
+        optimizer->Initialize(&point_sim->current_frame,&point_sim->previous_frame,lmap_ptr);
+
+        optimizer->OptimizeOnce();
+        optimizer->Converge();
+        std::cout<<"Debug : Final Pose"<<std::endl;
+        std::cout<<point_sim->current_frame.T_world2cam.matrix()<<std::endl;
+        return;
+    };
+
+    ~TestPoseOptimizer(){
+
+        delete optimizer;
+        delete point_sim;
+    }
+};
+
 
 int main(int argc, char **argv){
     ros::init(argc,argv,"image_listener");
@@ -499,6 +574,7 @@ int main(int argc, char **argv){
     //TestGetMatchedKeypoints test;
     //TestGenerate3DCoordinates test(nh);
     //TestFindCorrespondences test;
-    TestIncrementalMotion test(nh);
+    //TestIncrementalMotion test(nh);
+    TestPoseOptimizer test;
     return 0;
 }
