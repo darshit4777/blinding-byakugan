@@ -89,7 +89,6 @@ void PointSim::CreateFrames(){
 
         // Assign world coordinates
         fp1->world_coordinates = point;
-        std::cout<<point<<std::endl;
         
         // Assign Camera coordinates
         fp1->camera_coordinates = T_world2cam1.inverse() * point;

@@ -523,7 +523,7 @@ class TestPoseOptimizer{
         T_caml2camr = T_body2caml.inverse() * T_body2camr;                                
         point_sim->CreateCameras(cam_left,cam_right);
         point_sim->SetInterCameraTransform(T_caml2camr);
-        point_sim->CreateRandomPoints(1,5);
+        point_sim->CreateRandomPoints(1000,5);
 
         // Creating camera poses
         Eigen::Transform<double,3,2> T_world2cam1,T_world2cam2;
@@ -532,10 +532,20 @@ class TestPoseOptimizer{
         T_world2cam1.translation().y() =0;
         T_world2cam1.translation().z() =-5.0; 
         T_world2cam2.setIdentity();
-        T_world2cam2.translation().x() = 0.3;
-        T_world2cam2.translation().y() = -0.3;
-        T_world2cam2.translation().z() = -4.7;
+        T_world2cam2.translation().x() = 0.0;
+        T_world2cam2.translation().y() = 0.0;
+        T_world2cam2.translation().z() = -5.0;
+        Eigen::AngleAxis<double> z(Degrees2Radians(3),Eigen::Vector3d(0,0,1));
+        Eigen::AngleAxis<double> y(Degrees2Radians(3),Eigen::Vector3d(0,1,0));
+        Eigen::AngleAxis<double> x(Degrees2Radians(3),Eigen::Vector3d(1,0,0));
+        
 
+        T_world2cam2 = T_world2cam2 * z;
+        T_world2cam2 = T_world2cam2 * y;
+        T_world2cam2 = T_world2cam2 * x; 
+
+        std::cout<<"Correct Solution"<<std::endl;
+        std::cout<<T_world2cam2.matrix()<<std::endl;
         point_sim->SetCameraPositions(T_world2cam1,T_world2cam2);
         //point_sim->SetCameraPositionAndTransform(T_world2cam1,T_world2cam2);
         point_sim->CreateFrames();
@@ -560,6 +570,10 @@ class TestPoseOptimizer{
 
         delete optimizer;
         delete point_sim;
+    }
+
+    double Degrees2Radians(double degrees){
+        return degrees * CV_PI / 180;
     }
 };
 

@@ -14,7 +14,7 @@ PoseOptimizer::PoseOptimizer(){
     parameters.minimum_depth = 0.1;
     parameters.maximum_depth = 10.0;
     parameters.maximum_reliable_depth = 100.0;
-    parameters.kernel_maximum_error = 50;
+    parameters.kernel_maximum_error = 300;
     parameters.max_iterations = 10;
 
     parameters.min_correspondences = 200;
@@ -22,7 +22,7 @@ PoseOptimizer::PoseOptimizer(){
     parameters.angular_delta = 0.001;
     parameters.translation_delta = 0.01;
 
-    parameters.ignore_outliers = true;
+    parameters.ignore_outliers = false;
     parameters.min_inliers = 100;
 
     // Setting up pose optimizer variables
@@ -60,6 +60,8 @@ void PoseOptimizer::Initialize(VisualSlamBase::Frame* curr_frame_ptr,VisualSlamB
     previous_frame_ptr = prev_frame_ptr;
     lmap_ptr = local_map_ptr;
     // No of measurements
+    std::cout<<"Initial Pose"<<std::endl;
+    std::cout<<current_frame_ptr->T_world2cam.matrix()<<std::endl;
     measurements = 0;
     for(int i =0; i< current_frame_ptr->points.size(); i++){
         if(current_frame_ptr->points[i].previous == NULL){
@@ -382,7 +384,9 @@ void PoseOptimizer::Update(){
      */
     
     // Update the pose
-    current_frame_ptr->T_cam2world = previous_frame_ptr->T_cam2world * T_prev2curr.inverse();
+    std::cout<<"Debug : T_prev2curr Final"<<std::endl;
+    std::cout<<T_prev2curr.matrix()<<std::endl;
+    current_frame_ptr->T_cam2world =  T_prev2curr * previous_frame_ptr->T_cam2world;
     current_frame_ptr->T_world2cam = current_frame_ptr->T_cam2world.inverse();
 
     // Update the landmarks
