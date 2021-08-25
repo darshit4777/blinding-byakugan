@@ -584,11 +584,6 @@ int main(int argc, char **argv){
     image_transport::ImageTransport it(nh);
     image_transport::Subscriber imageSub_l = it.subscribe("cam0/image_raw", 1, boost::bind(CameraCallback,_1,0));
     image_transport::Subscriber imageSub_r = it.subscribe("cam1/image_raw", 1, boost::bind(CameraCallback,_1,1));
-    //TestDetectFeatures test;
-    //TestGetMatchedKeypoints test;
-    //TestGenerate3DCoordinates test(nh);
-    //TestFindCorrespondences test;
-    //TestIncrementalMotion test(nh);
     TestPoseOptimizer test;
     return 0;
 }

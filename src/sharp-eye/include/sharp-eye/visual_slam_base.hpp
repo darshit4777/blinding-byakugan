@@ -61,10 +61,38 @@ class VisualSlamBase{
        std::vector<Landmark> associated_landmarks; // enclosed Landmarks
    };
 
-   struct WorldMap{
+   class WorldMap{
+
+       typedef boost::shared_ptr<LocalMap> LocalMapSharedPtr;  
+       typedef boost::shared_ptr<Landmark> LandmarkSharedPtr;
+       public:
        Eigen::Transform<double,3,2> T_map2world, T_world2map;
-       std::vector<LocalMap> local_maps;
-       std::vector<Landmark> enclosed_landmarks;
+       std::vector<LocalMapSharedPtr> local_maps;
+       std::vector<LandmarkSharedPtr> enclosed_landmarks;
        g2o::OptimizableGraph* pose_graph_ptr;
+
+       /**
+        * @brief Construct a new World Map object
+        * 
+        */
+       WorldMap();
+       /**
+        * @brief Destroy the World Map object
+        * 
+        */
+       ~WorldMap();
+
+       /**
+        * @brief Creates a New Local Map object
+        * and stored the pointer to access it.
+        * 
+        */
+       LocalMapSharedPtr CreateNewLocalMap(Eigen::Transform<double,3,2> T_map2world);
+
+       /**
+        * @brief Adds a landmark to the list of landmarks
+        * 
+        */
+       void AddLandmark(LandmarkPtr landmark_ptr);
    };
 };
