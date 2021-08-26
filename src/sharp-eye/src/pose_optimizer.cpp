@@ -124,7 +124,7 @@ void PoseOptimizer::ComputeError(VisualSlamBase::Framepoint fp){
     };
 
     // Now we project the points from the previous frame into pixel coordinates
-    Eigen::Vector3d lcam_pixels,rcam_pixels;
+    Eigen::Vector3f lcam_pixels,rcam_pixels;
     lcam_pixels = current_frame_ptr->camera_l.intrinsics * p_caml;
     lcam_pixels[0] = lcam_pixels[0]/lcam_pixels[2];
     lcam_pixels[1] = lcam_pixels[1]/lcam_pixels[2];
@@ -164,7 +164,7 @@ void PoseOptimizer::ComputeError(VisualSlamBase::Framepoint fp){
     //reproj_error[2] = 0.0;
     //reproj_error[3] = 0.0;
     
-    const double error_squared = reproj_error.transpose()*reproj_error;
+    const float error_squared = reproj_error.transpose()*reproj_error;
     if(error_squared < parameters.kernel_maximum_error){
         // Drawing it on the images for visualization
         /// Drawing the fixed points
@@ -188,7 +188,7 @@ void PoseOptimizer::ComputeError(VisualSlamBase::Framepoint fp){
     return;
 };
 
-bool PoseOptimizer::HasInf(Eigen::Vector3d vec){
+bool PoseOptimizer::HasInf(Eigen::Vector3f vec){
 
     /**
      * @brief Checks the vector to see if any of the elements have an inf
@@ -217,7 +217,7 @@ void PoseOptimizer::Linearize(VisualSlamBase::Framepoint fp){
     if(!compute_success){
         return;
     };
-    double error_squared = reproj_error.transpose() * reproj_error;
+    float error_squared = reproj_error.transpose() * reproj_error;
     if(error_squared > parameters.kernel_maximum_error){
         if(parameters.ignore_outliers){
             return;
@@ -240,10 +240,10 @@ void PoseOptimizer::Linearize(VisualSlamBase::Framepoint fp){
     }
 
     // Now setting the weighting factor based on depth
-    double translation_factor = std::min(parameters.maximum_reliable_depth/p_caml[2],1.0);
+    float translation_factor = std::min(parameters.maximum_reliable_depth/p_caml[2],float(1.0));
 
     // Calculate the jacobian
-    Eigen::Matrix<double,4,6> J = FindJacobian(p_caml,p_camr,current_frame_ptr->camera_l,current_frame_ptr->camera_r,translation_factor);
+    Eigen::Matrix<float,4,6> J = FindJacobian(p_caml,p_camr,current_frame_ptr->camera_l,current_frame_ptr->camera_r,translation_factor);
 
     //update H and b
     H += J.transpose()*omega*J;
@@ -253,12 +253,12 @@ void PoseOptimizer::Linearize(VisualSlamBase::Framepoint fp){
     return;    
 };
 
-Eigen::Matrix<double,4,6> PoseOptimizer::FindJacobian(Eigen::Vector3d& left_cam_coordinates,Eigen::Vector3d& right_cam_coordinates,Camera& camera_l,Camera& camera_r,double omega){
-    Eigen::Matrix<double,4,6> J;
+Eigen::Matrix<float,4,6> PoseOptimizer::FindJacobian(Eigen::Vector3f& left_cam_coordinates,Eigen::Vector3f& right_cam_coordinates,Camera& camera_l,Camera& camera_r,float omega){
+    Eigen::Matrix<float,4,6> J;
 
-    Eigen::Matrix<double,2,3> left_projection_derivative, right_projection_derivative;
-    double fx_l,fy_l;
-    double fx_r,fy_r;
+    Eigen::Matrix<float,2,3> left_projection_derivative, right_projection_derivative;
+    float fx_l,fy_l;
+    float fx_r,fy_r;
 
     fx_l = camera_l.intrinsics(0,0);
     fy_l = camera_l.intrinsics(1,1);
@@ -266,8 +266,8 @@ Eigen::Matrix<double,4,6> PoseOptimizer::FindJacobian(Eigen::Vector3d& left_cam_
     fx_r = camera_r.intrinsics(0,0);
     fy_r = camera_r.intrinsics(1,1);
 
-    double x_l,y_l,z_l;
-    double x_r,y_r,z_r;
+    float x_l,y_l,z_l;
+    float x_r,y_r,z_r;
     x_l = left_cam_coordinates[0];
     y_l = left_cam_coordinates[1];
     z_l = left_cam_coordinates[2];
@@ -290,8 +290,8 @@ Eigen::Matrix<double,4,6> PoseOptimizer::FindJacobian(Eigen::Vector3d& left_cam_
     right_projection_derivative(1,1) = fy_r/z_r;
     right_projection_derivative(1,2) = -fy_r*y_r/(z_r*z_r);
 
-    Eigen::Matrix3d hat_cam_coordinates;
-    Eigen::Matrix3d identity3;
+    Eigen::Matrix3f hat_cam_coordinates;
+    Eigen::Matrix3f identity3;
     identity3.setIdentity();
     //std::cout<<"G coordinates "<<x_l<<" "<<y_l<<" "<<" "<<z_l<<std::endl;
     hat_cam_coordinates(0,0) = 0.0;
@@ -304,14 +304,14 @@ Eigen::Matrix<double,4,6> PoseOptimizer::FindJacobian(Eigen::Vector3d& left_cam_
     hat_cam_coordinates(2,1) = 2*x_l;
     hat_cam_coordinates(2,2) = 0.0;
 
-    Eigen::Matrix<double,3,6> J_Transform;
+    Eigen::Matrix<float,3,6> J_Transform;
     J_Transform.block<3,3>(0,0) = identity3 * omega;
     J_Transform.block<3,3>(0,3) = -hat_cam_coordinates;
 
     J.block<2,6>(0,0) = left_projection_derivative * J_Transform;
     J.block<2,6>(2,0) = right_projection_derivative * J_Transform;
 
-    //Eigen::Matrix<double,2,6> J_test;
+    //Eigen::Matrix<float,2,6> J_test;
     //J_test(0,0) = fx_l/z_l;
     //J_test(0,1) = 0;
     //J_test(0,2) = -fx_l * x_l /(z_l*z_l);
@@ -340,7 +340,7 @@ void PoseOptimizer::Solve(){
     Eigen::MatrixXd identity6;
     identity6.resize(6,6);
     identity6.setIdentity();
-    double damping_factor = measurements * 1;
+    float damping_factor = measurements * 1;
     H = H + damping_factor * identity6;
     dx = H.ldlt().solve(-b);
     //dx = H.fullPivLu().solve(-b);
@@ -348,24 +348,24 @@ void PoseOptimizer::Solve(){
     // dx ends up being a vector with the translation variables and the rotation angles
     // The rotation angles are a normalized quaternion
         
-    Eigen::Transform<double,3,2> dT;
+    Eigen::Transform<float,3,2> dT;
     dT.setIdentity();
     dT.translation().x() = dx[0];
     dT.translation().y() = dx[1];
     dT.translation().z() = dx[2];
         
     // The angles are in the form of normalized quaternion 
-    Eigen::Vector3d nquaternion;
+    Eigen::Vector3f nquaternion;
     nquaternion.x() = dx[3];
     nquaternion.y() = dx[4];
     nquaternion.z() = dx[5];
-    double n = nquaternion.squaredNorm();
-    Eigen::Matrix3d rot_matrix;
+    float n = nquaternion.squaredNorm();
+    Eigen::Matrix3f rot_matrix;
     if(n > 1){
         rot_matrix.setIdentity();
     }
     else{
-        double w = sqrt(1 - n);
+        float w = sqrt(1 - n);
         Eigen::Quaterniond q(w,nquaternion.x(),nquaternion.y(),nquaternion.z());
         rot_matrix =  q.toRotationMatrix();
     };
@@ -451,8 +451,8 @@ void PoseOptimizer::OptimizeOnce(){
 void PoseOptimizer::Converge(){
 
     // We create convergence and solving criteria here
-    double previous_error = 0;
-    double error_delta = 0;
+    float previous_error = 0;
+    float error_delta = 0;
     for(int i =0; i<parameters.max_iterations; i++){
     //TODO : This needs work
         OptimizeOnce();

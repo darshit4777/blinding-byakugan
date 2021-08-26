@@ -21,8 +21,8 @@ class VisualSlamBase{
    struct Framepoint{
        // A framepoint holds the information of a keypoint and its track
        KeypointWD keypoint_l, keypoint_r;
-       Eigen::Vector3d camera_coordinates;
-       Eigen::Vector3d world_coordinates;
+       Eigen::Vector3f camera_coordinates;
+       Eigen::Vector3f world_coordinates;
        //Framepoint *next, *previous;
        //boost::shared_ptr<Framepoint> next,previous;
        Framepoint *next,*previous;
@@ -35,21 +35,21 @@ class VisualSlamBase{
 
    struct Landmark{
        // Landmark hold the information of multiple framepoints and their world location
-       Eigen::Vector3d world_coordinates;
+       Eigen::Vector3f world_coordinates;
        //boost::shared_ptr<Framepoint> origin;
        Framepoint* origin;
-       Eigen::Matrix3d omega;
-       Eigen::Vector3d nu;
+       Eigen::Matrix3f omega;
+       Eigen::Vector3f nu;
    };
    struct Camera{
        // Calibrated camera object
-       Eigen::Matrix3d intrinsics;
-       std::vector<double> distortion_coeffs;
+       Eigen::Matrix3f intrinsics;
+       std::vector<float> distortion_coeffs;
    } camera_l, camera_r;
 
    struct Frame{
        cv::Mat image_l, image_r; //< raw image data
-       Eigen::Transform<double,3,2> T_cam2world, T_world2cam; // Eigen 3D affine transform to represent pose
+       Eigen::Transform<float,3,2> T_cam2world, T_world2cam; // Eigen 3D affine transform to represent pose
        std::vector<Framepoint> points;  // framepoints owned by the Frame
        Camera camera_l;
        Camera camera_r;
@@ -60,7 +60,7 @@ class VisualSlamBase{
        typedef boost::shared_ptr<Landmark> LandmarkSharedPtr;
        typedef std::vector<VisualSlamBase::Framepoint> FramepointVector;
        public:
-       Eigen::Transform<double,3,2> T_map2world, T_world2map;
+       Eigen::Transform<float,3,2> T_map2world, T_world2map;
        std::vector<FrameSharedPtr> frames; // enclosed frames
        std::vector<LandmarkSharedPtr> associated_landmarks; // enclosed Landmarks
 
@@ -76,7 +76,7 @@ class VisualSlamBase{
         * 
         * @param T_world2cam 
         */
-       void CreateNewFrame(cv::Mat image_left,cv::Mat image_right,FramepointVector fp_vector,Eigen::Transform<double,3,2> T_world2cam = Eigen::Transform<double,3,2>::Identity());
+       void CreateNewFrame(cv::Mat image_left,cv::Mat image_right,FramepointVector fp_vector,Eigen::Transform<float,3,2> T_world2cam = Eigen::Transform<float,3,2>::Identity());
 
        /**
         * @brief Add the landmark to the std vector of landmarks
@@ -98,7 +98,7 @@ class VisualSlamBase{
         * @return Frame* 
         */
        Frame* GetPreviousFrame();
-       
+
        /**
         * @brief Destroy the Local Map object
         * 
@@ -111,7 +111,7 @@ class VisualSlamBase{
        typedef boost::shared_ptr<LocalMap> LocalMapSharedPtr;  
        typedef boost::shared_ptr<Landmark> LandmarkSharedPtr;
        public:
-       Eigen::Transform<double,3,2> T_map2world, T_world2map;
+       Eigen::Transform<float,3,2> T_map2world, T_world2map;
        std::vector<LocalMapSharedPtr> local_maps;
        std::vector<LandmarkSharedPtr> enclosed_landmarks;
        g2o::OptimizableGraph* pose_graph_ptr;
@@ -132,7 +132,7 @@ class VisualSlamBase{
         * and stored the pointer to access it.
         * 
         */
-       LocalMapSharedPtr CreateNewLocalMap(Eigen::Transform<double,3,2> T_map2world = Eigen::Transform<double,3,2>::Identity());
+       LocalMapSharedPtr CreateNewLocalMap(Eigen::Transform<float,3,2> T_map2world = Eigen::Transform<float,3,2>::Identity());
 
        /**
         * @brief Adds a landmark to the list of landmarks

@@ -154,8 +154,8 @@ class TestGetMatchedKeypoints{
 
 class TestGenerate3DCoordinates{
     public:
-    double focal_length = 457.975;
-    double baseline = 0.11;
+    float focal_length = 457.975;
+    float baseline = 0.11;
     Eigen::Matrix3d cam_intrinsics;
     typedef pcl::PointXYZI PointGray;
     ros::Publisher pub;
@@ -218,7 +218,7 @@ class TestGenerate3DCoordinates{
             point.y = framepoint.camera_coordinates[1];
             point.z = framepoint.camera_coordinates[2];
 
-            double x,y;
+            float x,y;
             x = framepoint.keypoint_l.keypoint.pt.x;
             y = framepoint.keypoint_l.keypoint.pt.y;
             cv::Scalar intensity;
@@ -303,9 +303,9 @@ class TestFindCorrespondences{
 class TestIncrementalMotion{
     public:
 
-    Eigen::Transform<double,3,2> T_body2caml;
-    Eigen::Transform<double,3,2> T_body2camr;
-    Eigen::Transform<double,3,2> T_caml2camr;
+    Eigen::Transform<float,3,2> T_body2caml;
+    Eigen::Transform<float,3,2> T_body2camr;
+    Eigen::Transform<float,3,2> T_caml2camr;
 
     Camera cam_left;
     Camera cam_right;
@@ -347,27 +347,27 @@ class TestIncrementalMotion{
         cam_right.distortion_coeffs.push_back(-0.00010473);
         cam_right.distortion_coeffs.push_back(-3.55590700e-05);
 
-        cam_l_intrinsics = cv::Mat(3,3,cv::DataType<double>::type);    
-        cam_l_intrinsics.at<double>(0,0) = cam_left.intrinsics(0,0);
-        cam_l_intrinsics.at<double>(0,1) = cam_left.intrinsics(0,1);
-        cam_l_intrinsics.at<double>(0,2) = cam_left.intrinsics(0,2);
-        cam_l_intrinsics.at<double>(1,0) = cam_left.intrinsics(1,0);
-        cam_l_intrinsics.at<double>(1,1) = cam_left.intrinsics(1,1);
-        cam_l_intrinsics.at<double>(1,2) = cam_left.intrinsics(1,2);
-        cam_l_intrinsics.at<double>(2,0) = cam_left.intrinsics(2,0);
-        cam_l_intrinsics.at<double>(2,1) = cam_left.intrinsics(2,1);
-        cam_l_intrinsics.at<double>(2,2) = cam_left.intrinsics(2,2);
+        cam_l_intrinsics = cv::Mat(3,3,cv::DataType<float>::type);    
+        cam_l_intrinsics.at<float>(0,0) = cam_left.intrinsics(0,0);
+        cam_l_intrinsics.at<float>(0,1) = cam_left.intrinsics(0,1);
+        cam_l_intrinsics.at<float>(0,2) = cam_left.intrinsics(0,2);
+        cam_l_intrinsics.at<float>(1,0) = cam_left.intrinsics(1,0);
+        cam_l_intrinsics.at<float>(1,1) = cam_left.intrinsics(1,1);
+        cam_l_intrinsics.at<float>(1,2) = cam_left.intrinsics(1,2);
+        cam_l_intrinsics.at<float>(2,0) = cam_left.intrinsics(2,0);
+        cam_l_intrinsics.at<float>(2,1) = cam_left.intrinsics(2,1);
+        cam_l_intrinsics.at<float>(2,2) = cam_left.intrinsics(2,2);
 
-        cam_r_intrinsics = cv::Mat(3,3,cv::DataType<double>::type);
-        cam_r_intrinsics.at<double>(0,0) = cam_right.intrinsics(0,0);
-        cam_r_intrinsics.at<double>(0,1) = cam_right.intrinsics(0,1);
-        cam_r_intrinsics.at<double>(0,2) = cam_right.intrinsics(0,2);
-        cam_r_intrinsics.at<double>(1,0) = cam_right.intrinsics(1,0);
-        cam_r_intrinsics.at<double>(1,1) = cam_right.intrinsics(1,1);
-        cam_r_intrinsics.at<double>(1,2) = cam_right.intrinsics(1,2);
-        cam_r_intrinsics.at<double>(2,0) = cam_right.intrinsics(2,0);
-        cam_r_intrinsics.at<double>(2,1) = cam_right.intrinsics(2,1);
-        cam_r_intrinsics.at<double>(2,2) = cam_right.intrinsics(2,2);                                    
+        cam_r_intrinsics = cv::Mat(3,3,cv::DataType<float>::type);
+        cam_r_intrinsics.at<float>(0,0) = cam_right.intrinsics(0,0);
+        cam_r_intrinsics.at<float>(0,1) = cam_right.intrinsics(0,1);
+        cam_r_intrinsics.at<float>(0,2) = cam_right.intrinsics(0,2);
+        cam_r_intrinsics.at<float>(1,0) = cam_right.intrinsics(1,0);
+        cam_r_intrinsics.at<float>(1,1) = cam_right.intrinsics(1,1);
+        cam_r_intrinsics.at<float>(1,2) = cam_right.intrinsics(1,2);
+        cam_r_intrinsics.at<float>(2,0) = cam_right.intrinsics(2,0);
+        cam_r_intrinsics.at<float>(2,1) = cam_right.intrinsics(2,1);
+        cam_r_intrinsics.at<float>(2,2) = cam_right.intrinsics(2,2);                                    
 
         T_body2caml.matrix()<<   0.0148655429818, -0.999880929698, 0.00414029679422, -0.0216401454975,
                                     0.999557249008, 0.0149672133247, 0.025715529948, -0.064676986768,
@@ -419,7 +419,7 @@ class TestIncrementalMotion{
                 // Perform tracking by estimating the new pose
                 VisualSlamBase::Frame* current_frame;
                 
-                Eigen::Transform<double,3,2> new_pose;
+                Eigen::Transform<float,3,2> new_pose;
                 VisualSlamBase::LocalMap* lmap_ptr = tracking->map.GetLastLocalMap();
                 current_frame = lmap_ptr->GetLastFrame();
                 
@@ -466,7 +466,7 @@ class TestIncrementalMotion{
             return;
     };
 
-    void UndistortImages(cv::Mat cam_l_intrinsics,cv::Mat cam_r_intrinsics,std::vector<double> l_distortion,std::vector<double> r_distortion,cv::Mat& image_l,cv::Mat& image_r){
+    void UndistortImages(cv::Mat cam_l_intrinsics,cv::Mat cam_r_intrinsics,std::vector<float> l_distortion,std::vector<float> r_distortion,cv::Mat& image_l,cv::Mat& image_r){
 
         cv::undistort(image_l,undistorted_l,cam_l_intrinsics,l_distortion);
         cv::undistort(image_r,undistorted_r,cam_r_intrinsics,r_distortion);
@@ -474,7 +474,7 @@ class TestIncrementalMotion{
 
     };
 
-    void PublishPose(Eigen::Transform<double,3,2> pose){
+    void PublishPose(Eigen::Transform<float,3,2> pose){
         nav_msgs::Odometry odom_msg;
         odom_msg.child_frame_id = "base";
         odom_msg.header.frame_id = "world";
@@ -514,9 +514,9 @@ class TestPoseOptimizer{
                                     0.0,    456.134, 255.238,
                                     0.05,        0.0,    1.0;
 
-        Eigen::Transform<double,3,2> T_caml2camr;
+        Eigen::Transform<float,3,2> T_caml2camr;
 
-        Eigen::Transform<double,3,2> T_body2caml,T_body2camr;
+        Eigen::Transform<float,3,2> T_body2caml,T_body2camr;
         T_body2caml.matrix()<<   0.0148655429818, -0.999880929698, 0.00414029679422, -0.0216401454975,
                                     0.999557249008, 0.0149672133247, 0.025715529948, -0.064676986768,
                                 -0.0257744366974, 0.00375618835797, 0.999660727178, 0.00981073058949,
@@ -532,7 +532,7 @@ class TestPoseOptimizer{
         point_sim->CreateRandomPoints(1000,5);
 
         // Creating camera poses
-        Eigen::Transform<double,3,2> T_world2cam1,T_world2cam2;
+        Eigen::Transform<float,3,2> T_world2cam1,T_world2cam2;
         T_world2cam1.setIdentity();
         T_world2cam1.translation().x() =0;
         T_world2cam1.translation().y() =0;
@@ -541,9 +541,9 @@ class TestPoseOptimizer{
         T_world2cam2.translation().x() = 0.0;
         T_world2cam2.translation().y() = 0.0;
         T_world2cam2.translation().z() = -5.0;
-        Eigen::AngleAxis<double> z(Degrees2Radians(3),Eigen::Vector3d(0,0,1));
-        Eigen::AngleAxis<double> y(Degrees2Radians(3),Eigen::Vector3d(0,1,0));
-        Eigen::AngleAxis<double> x(Degrees2Radians(3),Eigen::Vector3d(1,0,0));
+        Eigen::AngleAxis<float> z(Degrees2Radians(3),Eigen::Vector3d(0,0,1));
+        Eigen::AngleAxis<float> y(Degrees2Radians(3),Eigen::Vector3d(0,1,0));
+        Eigen::AngleAxis<float> x(Degrees2Radians(3),Eigen::Vector3d(1,0,0));
         
 
         T_world2cam2 = T_world2cam2 * z;
@@ -578,7 +578,7 @@ class TestPoseOptimizer{
         delete point_sim;
     }
 
-    double Degrees2Radians(double degrees){
+    float Degrees2Radians(float degrees){
         return degrees * CV_PI / 180;
     }
 };

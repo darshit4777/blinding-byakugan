@@ -11,15 +11,15 @@ class PoseOptimizer{
     
     struct params{
         bool ignore_outliers;
-        double kernel_maximum_error;
-        double minimum_depth;
-        double maximum_depth;
-        double maximum_reliable_depth;
+        float kernel_maximum_error;
+        float minimum_depth;
+        float maximum_depth;
+        float maximum_reliable_depth;
         int max_iterations;
 
         // Movement Thresholds
-        double angular_delta;
-        double translation_delta;
+        float angular_delta;
+        float translation_delta;
 
         // Correspondences
         int min_correspondences;
@@ -28,21 +28,21 @@ class PoseOptimizer{
         int min_inliers;
 
         // Inter camera transform
-        Eigen::Transform<double,3,2> T_caml2camr;
+        Eigen::Transform<float,3,2> T_caml2camr;
 
     } parameters;
 
     // Error
-    double iteration_error;
-    double total_error;
+    float iteration_error;
+    float total_error;
     
     // Optimization variables
-    Eigen::Transform<double,3,2> T_prev2curr;
-    Eigen::Matrix<double,6,6> H;
+    Eigen::Transform<float,3,2> T_prev2curr;
+    Eigen::Matrix<float,6,6> H;
     Eigen::VectorXd b;
     Eigen::Matrix4d omega;
     Eigen::Vector4d reproj_error;
-    double translation_factor;
+    float translation_factor;
 
     // Inliers
     int measurements;
@@ -56,7 +56,7 @@ class PoseOptimizer{
     VisualSlamBase::LocalMap* lmap_ptr;
 
     // Camera Coordinates
-    Eigen::Vector3d p_caml,p_camr;
+    Eigen::Vector3f p_caml,p_camr;
 
     // Opencv Named Windows
     std::string left_cam; 
@@ -150,8 +150,8 @@ class PoseOptimizer{
      */
     void Update();
 
-    bool HasInf(Eigen::Vector3d vec);
+    bool HasInf(Eigen::Vector3f vec);
 
-    Eigen::Matrix<double,4,6> FindJacobian(Eigen::Vector3d& left_cam_coordinates,Eigen::Vector3d& right_cam_coordinates,Camera& camera_l,Camera& camera_r,double omega);
+    Eigen::Matrix<float,4,6> FindJacobian(Eigen::Vector3f& left_cam_coordinates,Eigen::Vector3f& right_cam_coordinates,Camera& camera_l,Camera& camera_r,float omega);
 
 };

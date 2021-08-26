@@ -12,7 +12,7 @@ VisualSlamBase::LocalMap::LocalMap(){
     return;
 };
 
-void VisualSlamBase::LocalMap::CreateNewFrame(cv::Mat image_left,cv::Mat image_right,FramepointVector fp_vector,Eigen::Transform<double,3,2> T_world2cam){
+void VisualSlamBase::LocalMap::CreateNewFrame(cv::Mat image_left,cv::Mat image_right,FramepointVector fp_vector,Eigen::Transform<float,3,2> T_world2cam){
     FrameSharedPtr frame_ptr = boost::make_shared<VisualSlamBase::Frame>();
     frame_ptr->T_world2cam = T_world2cam;
     frame_ptr->T_cam2world = T_world2cam.inverse();
@@ -60,7 +60,7 @@ VisualSlamBase::WorldMap::WorldMap(){
     //pose_graph_ptr = new g2o::OptimizableGraph;
 };
 
-LocalMapSharedPtr VisualSlamBase::WorldMap::CreateNewLocalMap(Eigen::Transform<double,3,2> T_map2world){
+LocalMapSharedPtr VisualSlamBase::WorldMap::CreateNewLocalMap(Eigen::Transform<float,3,2> T_map2world){
     LocalMapSharedPtr lmap_ptr = boost::make_shared<VisualSlamBase::LocalMap>();
     
     // Location where we want to create a new local map

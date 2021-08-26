@@ -11,28 +11,28 @@ void PointSim::CreateCameras(VisualSlamBase::Camera& camera_left,VisualSlamBase:
     return;
 };
 
-void PointSim::SetCameraPositions(Eigen::Transform<double,3,2> camera_initial,Eigen::Transform<double,3,2> camera_final){
+void PointSim::SetCameraPositions(Eigen::Transform<float,3,2> camera_initial,Eigen::Transform<float,3,2> camera_final){
     T_world2cam1 = camera_initial;
     T_world2cam2 = camera_final;
 
     return;
 };
 
-void PointSim::SetCameraPositionAndTransform(Eigen::Transform<double,3,2> camera_initial,Eigen::Transform<double,3,2> transform){
+void PointSim::SetCameraPositionAndTransform(Eigen::Transform<float,3,2> camera_initial,Eigen::Transform<float,3,2> transform){
     T_world2cam1 = camera_initial;
     //T_cam12cam2 = transform;
     T_world2cam2 = T_world2cam1*T_cam12cam2;
     return;
 };
 
-void PointSim::CreateRandomPoints(int no_of_points,double cube_dimension){
+void PointSim::CreateRandomPoints(int no_of_points,float cube_dimension){
     n = no_of_points;
     d = cube_dimension;
 
     point_list.clear();
 
     for(int i = 0; i<n; i++){
-        Eigen::Vector3d random_point;
+        Eigen::Vector3f random_point;
         random_point.setRandom();
         random_point = random_point * d;
         point_list.push_back(random_point);
@@ -41,8 +41,8 @@ void PointSim::CreateRandomPoints(int no_of_points,double cube_dimension){
     return;
 };
 
-cv::KeyPoint PointSim::ProjectPoints(Eigen::Vector3d point_3d,VisualSlamBase::Camera camera){
-    Eigen::Vector3d pixel_coordinates;
+cv::KeyPoint PointSim::ProjectPoints(Eigen::Vector3f point_3d,VisualSlamBase::Camera camera){
+    Eigen::Vector3f pixel_coordinates;
 
     pixel_coordinates = camera.intrinsics * point_3d;
 
@@ -99,7 +99,7 @@ void PointSim::CreateFrames(){
         fp2->keypoint_l.keypoint = ProjectPoints(fp2->camera_coordinates,camera_l);
 
         // Create right projection
-        Eigen::Vector3d right_cam_coordinates_1,right_cam_coordinates_2;
+        Eigen::Vector3f right_cam_coordinates_1,right_cam_coordinates_2;
         right_cam_coordinates_1 = T_caml2camr.inverse() * fp1->camera_coordinates;
         right_cam_coordinates_2 = T_caml2camr.inverse() * fp2->camera_coordinates;
 
@@ -145,7 +145,7 @@ bool PointSim::InFieldOfView(cv::KeyPoint keypoint_l,cv::KeyPoint keypoint_r){
     return true;
 }; 
 
-void PointSim::SetInterCameraTransform(Eigen::Transform<double,3,2> transform){
+void PointSim::SetInterCameraTransform(Eigen::Transform<float,3,2> transform){
     T_caml2camr = transform;
     return;
 };

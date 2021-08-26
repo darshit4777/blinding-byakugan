@@ -42,7 +42,7 @@ class VisualTracking{
     FramepointVector framepoint_vec;
 
     // Left and Right Camera transform
-    Eigen::Transform<double,3,2> T_caml2camr;
+    Eigen::Transform<float,3,2> T_caml2camr;
 
     // Correspondences
     int frame_correspondences;
@@ -51,12 +51,12 @@ class VisualTracking{
     PoseOptimizer* optimizer;
 
     struct ManifoldDerivative{
-        Eigen::Transform<double,3,2> deltaT;
+        Eigen::Transform<float,3,2> deltaT;
         _Time prediction_call;
         _Time previous_prediction_call;
         _Time previous_differential_call;
-        double differential_interval;
-        double prediction_interval;
+        float differential_interval;
+        float prediction_interval;
         bool clock_set;
         bool deltaT_set;
     } state_jacobian;
@@ -88,18 +88,18 @@ class VisualTracking{
      * @param frame_ptr 
      * @param cam_coordinates << Coordinates of the specific framepoint in the camera frame of reference
      * @param T_w2c << Estimate of the pose of the camera in the world
-     * @return Eigen::Matrix<double,4,6> 
+     * @return Eigen::Matrix<float,4,6> 
      */
-    Eigen::Matrix<double,4,6> FindJacobian(Eigen::Vector3d& left_cam_coordinates,Eigen::Vector3d& right_cam_coordinates,Camera& camera_l,Camera& camera_r,double omega);
+    Eigen::Matrix<float,4,6> FindJacobian(Eigen::Vector3f& left_cam_coordinates,Eigen::Vector3f& right_cam_coordinates,Camera& camera_l,Camera& camera_r,float omega);
 
     /**
      * @brief Estimates the new pose after a change in motion by solving an optimization problem
      * between two sets of corresponding 3D points.
      * 
      * @param frame_ptr 
-     * @return Eigen::Transform<double,3,2> 
+     * @return Eigen::Transform<float,3,2> 
      */
-    Eigen::Transform<double,3,2> EstimateIncrementalMotion(VisualSlamBase::Frame &frame_ptr);
+    Eigen::Transform<float,3,2> EstimateIncrementalMotion(VisualSlamBase::Frame &frame_ptr);
 
     /**
      * @brief Calculates the jacobian of the motion wrt time.
@@ -117,9 +117,9 @@ class VisualTracking{
      * 
      * @param frame_ptr 
      * @param time_derivative 
-     * @return Eigen::Transform<double,3,2> 
+     * @return Eigen::Transform<float,3,2> 
      */
-    Eigen::Transform<double,3,2> CalculatePosePrediction(VisualSlamBase::Frame* frame_ptr);
+    Eigen::Transform<float,3,2> CalculatePosePrediction(VisualSlamBase::Frame* frame_ptr);
 
     /**
      * @brief Sets the Prediction Call Time 
@@ -137,7 +137,7 @@ class VisualTracking{
 
     void SetFramepointVector(FramepointVector& framepoints);
     
-    bool HasInf(Eigen::Vector3d vec);
+    bool HasInf(Eigen::Vector3f vec);
     private:
     void InitializeStateJacobian();
 

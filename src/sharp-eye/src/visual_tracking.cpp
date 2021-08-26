@@ -151,12 +151,12 @@ int VisualTracking::FindCorrespondences(FramepointVector &previous_frame,Framepo
     return correspondences;
 };
 
-Eigen::Matrix<double,4,6> VisualTracking::FindJacobian(Eigen::Vector3d& left_cam_coordinates,Eigen::Vector3d& right_cam_coordinates,Camera& camera_l,Camera& camera_r,double omega){
-    Eigen::Matrix<double,4,6> J;
+Eigen::Matrix<float,4,6> VisualTracking::FindJacobian(Eigen::Vector3f& left_cam_coordinates,Eigen::Vector3f& right_cam_coordinates,Camera& camera_l,Camera& camera_r,float omega){
+    Eigen::Matrix<float,4,6> J;
 
-    Eigen::Matrix<double,2,3> left_projection_derivative, right_projection_derivative;
-    double fx_l,fy_l;
-    double fx_r,fy_r;
+    Eigen::Matrix<float,2,3> left_projection_derivative, right_projection_derivative;
+    float fx_l,fy_l;
+    float fx_r,fy_r;
 
     fx_l = camera_l.intrinsics(0,0);
     fy_l = camera_l.intrinsics(1,1);
@@ -164,8 +164,8 @@ Eigen::Matrix<double,4,6> VisualTracking::FindJacobian(Eigen::Vector3d& left_cam
     fx_r = camera_r.intrinsics(0,0);
     fy_r = camera_r.intrinsics(1,1);
 
-    double x_l,y_l,z_l;
-    double x_r,y_r,z_r;
+    float x_l,y_l,z_l;
+    float x_r,y_r,z_r;
     x_l = left_cam_coordinates[0];
     y_l = left_cam_coordinates[1];
     z_l = left_cam_coordinates[2];
@@ -202,14 +202,14 @@ Eigen::Matrix<double,4,6> VisualTracking::FindJacobian(Eigen::Vector3d& left_cam
     hat_cam_coordinates(2,1) = 2*x_l;
     hat_cam_coordinates(2,2) = 0.0;
 
-    Eigen::Matrix<double,3,6> J_Transform;
+    Eigen::Matrix<float,3,6> J_Transform;
     J_Transform.block<3,3>(0,0) = identity3 * omega;
     J_Transform.block<3,3>(0,3) = -hat_cam_coordinates;
 
     J.block<2,6>(0,0) = left_projection_derivative * J_Transform;
     J.block<2,6>(2,0) = right_projection_derivative * J_Transform;
 
-    //Eigen::Matrix<double,2,6> J_test;
+    //Eigen::Matrix<float,2,6> J_test;
     //J_test(0,0) = fx_l/z_l;
     //J_test(0,1) = 0;
     //J_test(0,2) = -fx_l * x_l /(z_l*z_l);
@@ -226,7 +226,7 @@ Eigen::Matrix<double,4,6> VisualTracking::FindJacobian(Eigen::Vector3d& left_cam
     return J;
 };
 
-Eigen::Transform<double,3,2> VisualTracking::EstimateIncrementalMotion(VisualSlamBase::Frame &frame_ptr){
+Eigen::Transform<float,3,2> VisualTracking::EstimateIncrementalMotion(VisualSlamBase::Frame &frame_ptr){
     optimizer->parameters.T_caml2camr = T_caml2camr;
      
     VisualSlamBase::LocalMap* lmap_ptr = map.GetLastLocalMap();
@@ -244,13 +244,13 @@ VisualTracking::ManifoldDerivative VisualTracking::CalculateMotionJacobian(Visua
      * 
      */
 
-    Eigen::Transform<double,3,2> T2,T1;
+    Eigen::Transform<float,3,2> T2,T1;
     T1 = previous_frame_ptr->T_world2cam;
     T2 = current_frame_ptr->T_world2cam;
     state_jacobian.deltaT = T1.inverse() * T2;
     auto current_time = std::chrono::high_resolution_clock::now();
     if(state_jacobian.clock_set){
-        state_jacobian.differential_interval = std::chrono::duration<double, std::milli>(state_jacobian.prediction_call - state_jacobian.previous_prediction_call).count();
+        state_jacobian.differential_interval = std::chrono::duration<float, std::milli>(state_jacobian.prediction_call - state_jacobian.previous_prediction_call).count();
     }
     else{
         std::cout<<"Warning: Debug : The differential time delta was not set, this may cause pose predictions to fail"<<std::endl;
@@ -261,7 +261,7 @@ VisualTracking::ManifoldDerivative VisualTracking::CalculateMotionJacobian(Visua
 };
 
 
-Eigen::Transform<double,3,2> VisualTracking::CalculatePosePrediction(VisualSlamBase::Frame* frame_ptr){
+Eigen::Transform<float,3,2> VisualTracking::CalculatePosePrediction(VisualSlamBase::Frame* frame_ptr){
     /**
      * @brief The method of performing pose prediction on SE3 involves a small hack
      * Tpredicted = T1 + deltaT;
@@ -272,11 +272,11 @@ Eigen::Transform<double,3,2> VisualTracking::CalculatePosePrediction(VisualSlamB
      * the matrix to and for loop it.
      */
     auto current_time = std::chrono::high_resolution_clock::now();
-    Eigen::Transform<double,3,2> T_predicted;
+    Eigen::Transform<float,3,2> T_predicted;
     T_predicted.setIdentity();
     if(state_jacobian.deltaT_set){
-        double time_elapsed = std::chrono::duration<double, std::milli>(state_jacobian.prediction_call - state_jacobian.previous_prediction_call).count();
-        double time_fraction = time_elapsed/state_jacobian.differential_interval;
+        float time_elapsed = std::chrono::duration<float, std::milli>(state_jacobian.prediction_call - state_jacobian.previous_prediction_call).count();
+        float time_fraction = time_elapsed/state_jacobian.differential_interval;
         int iterations = 0;
         if(state_jacobian.differential_interval == 0){
             iterations = 0;
@@ -472,7 +472,7 @@ void VisualTracking::InitializeNode(){
     };  
 };
 
-bool VisualTracking::HasInf(Eigen::Vector3d vec){
+bool VisualTracking::HasInf(Eigen::Vector3f vec){
     /**
      * @brief Checks the vector to see if any of the elements have an inf
      * 
