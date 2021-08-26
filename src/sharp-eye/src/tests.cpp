@@ -423,9 +423,14 @@ class TestIncrementalMotion{
                 VisualSlamBase::LocalMap* lmap_ptr = tracking->map.GetLastLocalMap();
                 current_frame = lmap_ptr->GetLastFrame();
                 
-                new_pose = tracking->EstimateIncrementalMotion(*current_frame);
-                //std::cout<<"Debug : New Pose"<<std::endl;
-                //std::cout<<new_pose.matrix()<<std::endl;
+                // TODO : This is a band-aid patch - not quite elegant. A better solution would be to use class variables 
+                // that keep track of current and previous frames
+                if(tracking->frame_correspondences > 0){
+                    new_pose = tracking->EstimateIncrementalMotion(*current_frame);
+                }
+                else{
+                    new_pose = current_frame->T_world2cam;
+                };
 
                 PublishPose(new_pose);
                 
@@ -585,6 +590,6 @@ int main(int argc, char **argv){
     image_transport::ImageTransport it(nh);
     image_transport::Subscriber imageSub_l = it.subscribe("cam0/image_raw", 1, boost::bind(CameraCallback,_1,0));
     image_transport::Subscriber imageSub_r = it.subscribe("cam1/image_raw", 1, boost::bind(CameraCallback,_1,1));
-    TestPoseOptimizer test;
+    TestIncrementalMotion test(nh);
     return 0;
 }

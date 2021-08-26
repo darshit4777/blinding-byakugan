@@ -45,6 +45,10 @@ VisualSlamBase::Frame* VisualSlamBase::LocalMap::GetPreviousFrame(){
     return frame_ptr;
 };
 
+VisualSlamBase::LocalMap::~LocalMap(){
+    return;
+}
+
 VisualSlamBase::WorldMap::WorldMap(){
     // Create a new world map
     T_map2world.setIdentity();
@@ -53,7 +57,7 @@ VisualSlamBase::WorldMap::WorldMap(){
     local_maps.clear();
     enclosed_landmarks.clear();
 
-    pose_graph_ptr = new g2o::OptimizableGraph;
+    //pose_graph_ptr = new g2o::OptimizableGraph;
 };
 
 LocalMapSharedPtr VisualSlamBase::WorldMap::CreateNewLocalMap(Eigen::Transform<double,3,2> T_map2world){
@@ -78,7 +82,7 @@ void VisualSlamBase::WorldMap::AddLandmark(LandmarkSharedPtr landmark_ptr){
 };
 
 VisualSlamBase::WorldMap::~WorldMap(){
-    delete pose_graph_ptr;
+    //delete pose_graph_ptr;
     return;
 };
 
