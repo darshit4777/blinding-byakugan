@@ -55,10 +55,56 @@ class VisualSlamBase{
        Camera camera_r;
    };
 
-   struct LocalMap{
+   class LocalMap{
+       typedef boost::shared_ptr<Frame> FrameSharedPtr;
+       typedef boost::shared_ptr<Landmark> LandmarkSharedPtr;
+       typedef std::vector<VisualSlamBase::Framepoint> FramepointVector;
+       public:
        Eigen::Transform<double,3,2> T_map2world, T_world2map;
-       std::vector<Frame> frames; // enclosed frames
-       std::vector<Landmark> associated_landmarks; // enclosed Landmarks
+       std::vector<FrameSharedPtr> frames; // enclosed frames
+       std::vector<LandmarkSharedPtr> associated_landmarks; // enclosed Landmarks
+
+       public:
+       /**
+        * @brief Construct a new Local Map object
+        * 
+        */
+       LocalMap();
+
+       /**
+        * @brief Create a New Frame object
+        * 
+        * @param T_world2cam 
+        */
+       void CreateNewFrame(cv::Mat image_left,cv::Mat image_right,FramepointVector fp_vector,Eigen::Transform<double,3,2> T_world2cam = Eigen::Transform<double,3,2>::Identity());
+
+       /**
+        * @brief Add the landmark to the std vector of landmarks
+        * 
+        * @param landmark_ptr 
+        */
+       void AddLandmark(LandmarkSharedPtr landmark_ptr);
+       
+       /**
+        * @brief Get the Last Frame object
+        * 
+        * @return Frame* 
+        */
+       Frame* GetLastFrame();
+
+       /**
+        * @brief Get the Previous Frame object
+        * 
+        * @return Frame* 
+        */
+       Frame* GetPreviousFrame();
+
+       private:
+       /**
+        * @brief Destroy the Local Map object
+        * 
+        */
+       ~LocalMap();
    };
 
    class WorldMap{
@@ -87,12 +133,14 @@ class VisualSlamBase{
         * and stored the pointer to access it.
         * 
         */
-       LocalMapSharedPtr CreateNewLocalMap(Eigen::Transform<double,3,2> T_map2world);
+       LocalMapSharedPtr CreateNewLocalMap(Eigen::Transform<double,3,2> T_map2world = Eigen::Transform<double,3,2>::Identity());
 
        /**
         * @brief Adds a landmark to the list of landmarks
         * 
         */
-       void AddLandmark(LandmarkPtr landmark_ptr);
+       void AddLandmark(LandmarkSharedPtr landmark_ptr);
+
+       VisualSlamBase::LocalMap* GetLastLocalMap();
    };
 };

@@ -161,6 +161,9 @@ add_library(pose_optimizer
 add_library(point_sim
   src/point_sim.cpp
 )
+add_library(visual_slam_base
+  src/visual_slam_base.cpp
+)
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
@@ -169,6 +172,7 @@ add_dependencies(visual_triangulation ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catk
 add_dependencies(visual_tracking ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(pose_optimizer ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(point_sim ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(visual_slam_base ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
@@ -204,6 +208,7 @@ target_link_libraries(test_node
   ${PCL_LIBRARIES}
   ${G2O_LIBRARY_DIRS}
   point_sim
+  visual_slam_base
 )
 
 #############

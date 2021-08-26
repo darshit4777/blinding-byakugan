@@ -430,7 +430,7 @@ class TestIncrementalMotion{
                 
                 
                 // Calculate Motion Derivative
-                if(tracking->map.local_maps[0].frames.size() > 1){
+                if(tracking->map.local_maps[0]->frames.size() > 1){
                     VisualSlamBase::Frame* previous_frame;
                     previous_frame = tracking->GetPreviousFrame();
                     tracking->CalculateMotionJacobian(current_frame,previous_frame);
