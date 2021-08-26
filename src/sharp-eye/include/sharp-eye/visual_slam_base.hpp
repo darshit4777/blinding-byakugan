@@ -98,8 +98,7 @@ class VisualSlamBase{
         * @return Frame* 
         */
        Frame* GetPreviousFrame();
-
-       private:
+       
        /**
         * @brief Destroy the Local Map object
         * 

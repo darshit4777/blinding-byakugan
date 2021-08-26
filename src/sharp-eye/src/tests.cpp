@@ -420,7 +420,8 @@ class TestIncrementalMotion{
                 VisualSlamBase::Frame* current_frame;
                 
                 Eigen::Transform<double,3,2> new_pose;
-                current_frame = tracking->GetCurrentFrame();
+                VisualSlamBase::LocalMap* lmap_ptr = tracking->map.GetLastLocalMap();
+                current_frame = lmap_ptr->GetLastFrame();
                 
                 new_pose = tracking->EstimateIncrementalMotion(*current_frame);
                 //std::cout<<"Debug : New Pose"<<std::endl;
@@ -432,7 +433,7 @@ class TestIncrementalMotion{
                 // Calculate Motion Derivative
                 if(tracking->map.local_maps[0]->frames.size() > 1){
                     VisualSlamBase::Frame* previous_frame;
-                    previous_frame = tracking->GetPreviousFrame();
+                    previous_frame = lmap_ptr->GetPreviousFrame();
                     tracking->CalculateMotionJacobian(current_frame,previous_frame);
                 }
             };
