@@ -14,9 +14,9 @@ class VisualTriangulation{
     // Cameras
     VisualSlamBase::Camera camera_l; //< Left camera intrinsics
     VisualSlamBase::Camera camera_r; //< Right camera intrinsics
-    double camera_baseline;
-    double focal_length_x;
-    double focal_length_y;
+    float camera_baseline;
+    float focal_length_x;
+    float focal_length_y;
 
     // Feature Handling
     cv::Ptr<cv::FeatureDetector> orb_detector;
@@ -88,7 +88,7 @@ class VisualTriangulation{
      * @param matched_features 
      * @return FramepointVector 
      */
-    FramepointVector Generate3DCoordinates(MatchVector &matched_features, FramepointVector &framepoints_in, double baseline, double focal_length,Eigen::Matrix3d camera_intrinsics);
+    FramepointVector Generate3DCoordinates(MatchVector &matched_features, FramepointVector &framepoints_in, float baseline, float focal_length,Eigen::Matrix3f camera_intrinsics);
 
     /**
      * @brief Get matches with epipolar constraints

@@ -39,9 +39,9 @@ class PoseOptimizer{
     // Optimization variables
     Eigen::Transform<float,3,2> T_prev2curr;
     Eigen::Matrix<float,6,6> H;
-    Eigen::VectorXd b;
-    Eigen::Matrix4d omega;
-    Eigen::Vector4d reproj_error;
+    Eigen::VectorXf b;
+    Eigen::Matrix4f omega;
+    Eigen::Vector4f reproj_error;
     float translation_factor;
 
     // Inliers

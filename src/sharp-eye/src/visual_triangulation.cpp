@@ -181,7 +181,7 @@ MatchVector VisualTriangulation::GetKeypointMatches(FeatureVector &left_vec, Fea
     return matched_vector;
 };
 
-FramepointVector VisualTriangulation::Generate3DCoordinates(MatchVector &matched_features,FramepointVector &framepoints_in, double baseline, double focal_length, Eigen::Matrix3d camera_intrinsics){
+FramepointVector VisualTriangulation::Generate3DCoordinates(MatchVector &matched_features,FramepointVector &framepoints_in, float baseline, float focal_length, Eigen::Matrix3f camera_intrinsics){
     /**
      * @brief Uses the camera baseline and matched keypoints from left and right
      * cameras to generate 3D coordinates of keypoints.
@@ -198,10 +198,10 @@ FramepointVector VisualTriangulation::Generate3DCoordinates(MatchVector &matched
         framepoint.keypoint_l = matched_features[i].first;
         framepoint.keypoint_r = matched_features[i].second;
 
-        Eigen::Vector3d camera_coordinates; // Coordinates in the camera frame
+        Eigen::Vector3f camera_coordinates; // Coordinates in the camera frame
         
         // Calculating pixel euclidean distance
-        double px_distance,xl,yl,xr,yr;
+        float px_distance,xl,yl,xr,yr;
         xl = matched_features[i].first.keypoint.pt.x;
         yl = matched_features[i].first.keypoint.pt.y;
         xr = matched_features[i].second.keypoint.pt.x;
@@ -212,10 +212,10 @@ FramepointVector VisualTriangulation::Generate3DCoordinates(MatchVector &matched
             continue;
         };
         camera_coordinates.z() = focal_length * baseline/px_distance;
-        double cx = camera_intrinsics.coeff(0,2);
-        double cy = camera_intrinsics.coeff(1,2);
-        double fx = camera_intrinsics.coeff(0,0);
-        double fy = camera_intrinsics.coeff(1,1);
+        float cx = camera_intrinsics.coeff(0,2);
+        float cy = camera_intrinsics.coeff(1,2);
+        float fx = camera_intrinsics.coeff(0,0);
+        float fy = camera_intrinsics.coeff(1,1);
         
         camera_coordinates.x() = (xl - cx)*camera_coordinates.z()/fx;
         camera_coordinates.y() = (yl - cy)*camera_coordinates.z()/fy;

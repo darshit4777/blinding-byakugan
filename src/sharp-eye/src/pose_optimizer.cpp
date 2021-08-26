@@ -335,9 +335,9 @@ void PoseOptimizer::Solve(){
      * SE3
      * 
      */
-    Eigen::VectorXd dx;
+    Eigen::VectorXf dx;
     dx.setZero();
-    Eigen::MatrixXd identity6;
+    Eigen::MatrixXf identity6;
     identity6.resize(6,6);
     identity6.setIdentity();
     float damping_factor = measurements * 1;
@@ -366,7 +366,7 @@ void PoseOptimizer::Solve(){
     }
     else{
         float w = sqrt(1 - n);
-        Eigen::Quaterniond q(w,nquaternion.x(),nquaternion.y(),nquaternion.z());
+        Eigen::Quaternionf q(w,nquaternion.x(),nquaternion.y(),nquaternion.z());
         rot_matrix =  q.toRotationMatrix();
     };
     // Simplest way to assign a 3D rotation matrix

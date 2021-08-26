@@ -188,8 +188,8 @@ Eigen::Matrix<float,4,6> VisualTracking::FindJacobian(Eigen::Vector3f& left_cam_
     right_projection_derivative(1,1) = fy_r/z_r;
     right_projection_derivative(1,2) = -fy_r*y_r/(z_r*z_r);
 
-    Eigen::Matrix3d hat_cam_coordinates;
-    Eigen::Matrix3d identity3;
+    Eigen::Matrix3f hat_cam_coordinates;
+    Eigen::Matrix3f identity3;
     identity3.setIdentity();
     //std::cout<<"G coordinates "<<x_l<<" "<<y_l<<" "<<" "<<z_l<<std::endl;
     hat_cam_coordinates(0,0) = 0.0;

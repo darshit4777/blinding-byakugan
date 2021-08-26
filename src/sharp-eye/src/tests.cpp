@@ -156,7 +156,7 @@ class TestGenerate3DCoordinates{
     public:
     float focal_length = 457.975;
     float baseline = 0.11;
-    Eigen::Matrix3d cam_intrinsics;
+    Eigen::Matrix3f cam_intrinsics;
     typedef pcl::PointXYZI PointGray;
     ros::Publisher pub;
     ros::NodeHandle nh;
@@ -482,8 +482,8 @@ class TestIncrementalMotion{
         odom_msg.pose.pose.position.y = pose.translation().y();
         odom_msg.pose.pose.position.z = pose.translation().z();
 
-        Eigen::Matrix3d rot_matrix = pose.rotation();
-        Eigen::Quaterniond q(rot_matrix);
+        Eigen::Matrix3f rot_matrix = pose.rotation();
+        Eigen::Quaternionf q(rot_matrix);
         odom_msg.pose.pose.orientation.x = q.x();
         odom_msg.pose.pose.orientation.y = q.y();
         odom_msg.pose.pose.orientation.z = q.z();
@@ -541,9 +541,9 @@ class TestPoseOptimizer{
         T_world2cam2.translation().x() = 0.0;
         T_world2cam2.translation().y() = 0.0;
         T_world2cam2.translation().z() = -5.0;
-        Eigen::AngleAxis<float> z(Degrees2Radians(3),Eigen::Vector3d(0,0,1));
-        Eigen::AngleAxis<float> y(Degrees2Radians(3),Eigen::Vector3d(0,1,0));
-        Eigen::AngleAxis<float> x(Degrees2Radians(3),Eigen::Vector3d(1,0,0));
+        Eigen::AngleAxis<float> z(Degrees2Radians(3),Eigen::Vector3f(0,0,1));
+        Eigen::AngleAxis<float> y(Degrees2Radians(3),Eigen::Vector3f(0,1,0));
+        Eigen::AngleAxis<float> x(Degrees2Radians(3),Eigen::Vector3f(1,0,0));
         
 
         T_world2cam2 = T_world2cam2 * z;
