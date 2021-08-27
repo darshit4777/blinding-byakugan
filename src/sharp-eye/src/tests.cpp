@@ -399,7 +399,7 @@ class TestIncrementalMotion{
                 // Set the time for recieving a new frame
 
                 // Calibrate
-                UndistortImages(cam_l_intrinsics,cam_r_intrinsics,cam_left.distortion_coeffs,cam_right.distortion_coeffs,image_l,image_r);
+                //UndistortImages(cam_l_intrinsics,cam_r_intrinsics,cam_left.distortion_coeffs,cam_right.distortion_coeffs,image_l,image_r);
                 std::cout<<"New Frame"<<std::endl;
                 tracking->SetPredictionCallTime();
 
@@ -448,21 +448,27 @@ class TestIncrementalMotion{
     void DetectFeatures(){
         if(received_l){
                 features_l.clear();
-                features_l = triangulator.DetectAndComputeFeatures(&undistorted_l,features_l,false);
+                features_l = triangulator.DetectAndComputeFeatures(&image_l,features_l,false);
             }
         if(received_r){
             features_r.clear();
-            features_r = triangulator.DetectAndComputeFeatures(&undistorted_r,features_r,false);
+            features_r = triangulator.DetectAndComputeFeatures(&image_r,features_r,false);
         }
-
+        std::cout<<"Debug : Features size"<<std::endl;
+        std::cout<<features_l.size()<<std::endl;
         return;
     };
 
     void Calculate3DCoordinates(){
         // Get Matches
             matches = triangulator.GetKeypointMatches(features_l,features_r);
+            std::cout<<"Debug : Matches size"<<std::endl;
+            std::cout<<matches.size()<<std::endl;
             // TODO : Put parametized arguments for baseline and fx
+            framepoints.clear();
             triangulator.Generate3DCoordinates(matches,framepoints,0.110074,457.95,cam_left.intrinsics);
+            std::cout<<"Debug : Framepoints size"<<std::endl;
+            std::cout<<framepoints.size()<<std::endl;
             return;
     };
 

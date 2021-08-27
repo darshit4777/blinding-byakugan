@@ -411,8 +411,8 @@ void PoseOptimizer::Update(){
     //};
 //
     //// The pose optimization is complete here - we relase the images from the previous frame
-    //previous_frame_ptr->image_l.release();
-    //previous_frame_ptr->image_r.release();
+    previous_frame_ptr->image_l.release();
+    previous_frame_ptr->image_r.release();
     return;
 };
 
