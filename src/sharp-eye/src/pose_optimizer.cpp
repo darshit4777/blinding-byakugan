@@ -13,8 +13,8 @@ PoseOptimizer::PoseOptimizer(){
     // Setting all params
     parameters.minimum_depth = 0.1;
     parameters.maximum_depth = 10.0;
-    parameters.maximum_reliable_depth = 100.0;
-    parameters.kernel_maximum_error = 300;
+    parameters.maximum_reliable_depth = 10.0;
+    parameters.kernel_maximum_error = 200;
     parameters.max_iterations = 10;
 
     parameters.min_correspondences = 200;
@@ -22,7 +22,7 @@ PoseOptimizer::PoseOptimizer(){
     parameters.angular_delta = 0.001;
     parameters.translation_delta = 0.01;
 
-    parameters.ignore_outliers = false;
+    parameters.ignore_outliers = true;
     parameters.min_inliers = 100;
 
     // Setting up pose optimizer variables
@@ -384,8 +384,8 @@ void PoseOptimizer::Update(){
      */
     
     // Update the pose
-    std::cout<<"Debug : T_prev2curr Final"<<std::endl;
-    std::cout<<T_prev2curr.matrix()<<std::endl;
+    //std::cout<<"Debug : T_prev2curr Final"<<std::endl;
+    //std::cout<<T_prev2curr.matrix()<<std::endl;
     current_frame_ptr->T_cam2world =  T_prev2curr * previous_frame_ptr->T_cam2world;
     current_frame_ptr->T_world2cam = current_frame_ptr->T_cam2world.inverse();
 
@@ -436,8 +436,8 @@ void PoseOptimizer::OptimizeOnce(){
         ComputeError(fp);
         Linearize(fp);
     };
-    std::cout<<"Debug : Inliers"<<std::endl;
-    std::cout<<inliers<<std::endl;
+    //std::cout<<"Debug : Inliers"<<std::endl;
+    //std::cout<<inliers<<std::endl;
     
     // Visualization
     //cv::imshow(left_cam,_img_left);

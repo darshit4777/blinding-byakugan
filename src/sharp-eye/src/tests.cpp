@@ -434,7 +434,6 @@ class TestIncrementalMotion{
 
                 PublishPose(new_pose);
                 
-                
                 // Calculate Motion Derivative
                 if(tracking->map.local_maps[0]->frames.size() > 1){
                     VisualSlamBase::Frame* previous_frame;
@@ -454,21 +453,21 @@ class TestIncrementalMotion{
             features_r.clear();
             features_r = triangulator.DetectAndComputeFeatures(&image_r,features_r,false);
         }
-        std::cout<<"Debug : Features size"<<std::endl;
-        std::cout<<features_l.size()<<std::endl;
+        //std::cout<<"Debug : Features size"<<std::endl;
+        //std::cout<<features_l.size()<<std::endl;
         return;
     };
 
     void Calculate3DCoordinates(){
         // Get Matches
             matches = triangulator.GetKeypointMatches(features_l,features_r);
-            std::cout<<"Debug : Matches size"<<std::endl;
-            std::cout<<matches.size()<<std::endl;
+            //std::cout<<"Debug : Matches size"<<std::endl;
+            //std::cout<<matches.size()<<std::endl;
             // TODO : Put parametized arguments for baseline and fx
             framepoints.clear();
             triangulator.Generate3DCoordinates(matches,framepoints,0.110074,457.95,cam_left.intrinsics);
-            std::cout<<"Debug : Framepoints size"<<std::endl;
-            std::cout<<framepoints.size()<<std::endl;
+            //std::cout<<"Debug : Framepoints size"<<std::endl;
+            //std::cout<<framepoints.size()<<std::endl;
             return;
     };
 
@@ -481,6 +480,7 @@ class TestIncrementalMotion{
     };
 
     void PublishPose(Eigen::Transform<float,3,2> pose){
+
         nav_msgs::Odometry odom_msg;
         odom_msg.child_frame_id = "base";
         odom_msg.header.frame_id = "world";
