@@ -9,8 +9,6 @@
 
 // Forward Declaration 
 struct Framepoint;
-
-
 class Landmark{
     // Landmark hold the information of multiple framepoints and their world location
     public:
@@ -18,4 +16,24 @@ class Landmark{
     boost::shared_ptr<Framepoint> origin;
     Eigen::Matrix3f omega;
     Eigen::Vector3f nu;
+    std::vector<boost::shared_ptr<Framepoint>> measurement_vector;
+
+    struct parameters{
+        int min_track_length;
+    };
+    static parameters params;
+    /**
+     * @brief Construct a new Landmark object
+     * 
+     */
+    Landmark(boost::shared_ptr<Framepoint> fp);
+
+    /**
+     * @brief Update the landmark pose estimate with a new measurement
+     * 
+     * @param fp 
+     */
+    void UpdateLandmark(boost::shared_ptr<Framepoint> fp);
+
+    ~Landmark();
 };

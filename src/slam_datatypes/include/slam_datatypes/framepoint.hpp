@@ -11,7 +11,6 @@
 // Forward Declaration
 struct Landmark;
 
-
 struct Framepoint{
     // A framepoint holds the information of a keypoint and its track
     KeypointWD keypoint_l, keypoint_r;
