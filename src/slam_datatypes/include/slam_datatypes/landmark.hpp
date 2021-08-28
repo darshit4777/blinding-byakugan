@@ -24,33 +24,24 @@ class Landmark{
             bool ignore_outliers;
             float kernel_maximum_error;
             float minimum_depth;
-            float maximum_depth;
-            float maximum_reliable_depth;
             int max_iterations;
-
-            // Movement Thresholds
-            float angular_delta;
-            float translation_delta;
-
-            // Correspondences
-            int min_correspondences;
-
-            // Inliers
-            int min_inliers;
-
+            
+            // Convergence threshold
+            float convergence_threshold;
             // Inter camera transform
             Eigen::Transform<float,3,2> T_caml2camr;
 
         };
         static optimization_params params;
+        std::vector<boost::shared_ptr<Framepoint>> measurements;
         
         // Error
         float iteration_error;
         float total_error;
     
         // Optimization variables
-        Eigen::Transform<float,3,2> T_prev2curr;
-        Eigen::Matrix<float,6,6> H;
+        Eigen::Vector3f world_coordinates;
+        Eigen::Matrix3f H;
         Eigen::VectorXf b;
         Eigen::Matrix4f omega;
         Eigen::Vector4f reproj_error;
@@ -79,7 +70,7 @@ class Landmark{
          * @brief Initializes all the pose optimizer variables
          * 
          */
-        void Initialize();
+        void Initialize(Eigen::Vector3f world_coordinates_);
 
         /**
          * @brief Runs the optimization loop once
