@@ -426,23 +426,10 @@ void PoseOptimizer::OptimizeOnce(){
     iteration_error = 0;
     inliers = 0;
 
-    // Visualization
-    //_img_left = cv::Mat(current_frame_ptr->image_l.size(),CV_8UC3);
-    //_img_right = cv::Mat(current_frame_ptr->image_r.size(),CV_8UC3);
-    //cv::cvtColor(current_frame_ptr->image_l,_img_left,CV_GRAY2BGR);   
-    //cv::cvtColor(current_frame_ptr->image_r,_img_right,CV_GRAY2BGR);
-
     for(Framepoint fp : current_frame_ptr->points){
         ComputeError(fp);
         Linearize(fp);
     };
-    //std::cout<<"Debug : Inliers"<<std::endl;
-    //std::cout<<inliers<<std::endl;
-    
-    // Visualization
-    //cv::imshow(left_cam,_img_left);
-    //cv::imshow(right_cam,_img_right);
-    //cv::waitKey(2);
     
     Solve();
     return;

@@ -16,7 +16,7 @@ class Landmark{
     boost::shared_ptr<Framepoint> origin;
     Eigen::Matrix3f omega;
     Eigen::Vector3f nu;
-    std::vector<boost::shared_ptr<Framepoint>> measurement_vector;
+    
 
     class PoseOptimizer{
         public:    
@@ -33,22 +33,23 @@ class Landmark{
 
         };
         static optimization_params params;
-        std::vector<boost::shared_ptr<Framepoint>> measurements;
+        std::vector<boost::shared_ptr<Framepoint>> measurement_vector;
         
         // Error
         float iteration_error;
         float total_error;
-    
+        float error_squared;
+
         // Optimization variables
-        Eigen::Vector3f world_coordinates;
+        Eigen::Vector3f estimated_world_coordinates;
         Eigen::Matrix3f H;
-        Eigen::VectorXf b;
-        Eigen::Matrix4f omega;
-        Eigen::Vector4f reproj_error;
+        Eigen::Vector3f b;
+        Eigen::Matrix3f omega;
+        Eigen::Vector3f distance_error;
+        
         float translation_factor;
 
         // Inliers
-        int measurements;
         int inliers;
 
         // Camera Coordinates
@@ -91,13 +92,13 @@ class Landmark{
          * checks for invalid points and then computes the reprojection error
          * 
          */
-        void ComputeError(Framepoint fp);
+        void ComputeError(Framepoint& fp);
     
         /**
          * @brief Assembles the H, b and omega matrices
          * 
          */
-        void Linearize(Framepoint fp);
+        void Linearize(Framepoint& fp);
 
         /**
          * @brief Solves for Dx and transforms it into the SE3 form
@@ -112,11 +113,11 @@ class Landmark{
          */
         void Update();
 
-        bool HasInf(Eigen::Vector3f vec);
+        bool HasInf(Eigen::Vector3f& vec);
 
-        Eigen::Matrix<float,4,6> FindJacobian(Eigen::Vector3f& left_cam_coordinates,Eigen::Vector3f& right_cam_coordinates,Camera& camera_l,Camera& camera_r,float omega);
+        Eigen::Matrix3f FindJacobian(Framepoint& fp);
 
-    };
+    } optimizer;
 
     struct parameters{
         int min_track_length;

@@ -23,5 +23,6 @@ struct Framepoint{
     bool inlier;
     //boost::shared_ptr<Landmark> associated_landmark;
     boost::shared_ptr<Landmark> associated_landmark;
+    boost::shared_ptr<Frame> parent_frame; //<< Whose your daddy? haha
     bool landmark_set;
 };
