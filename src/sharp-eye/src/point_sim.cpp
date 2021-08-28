@@ -5,7 +5,7 @@ PointSim::PointSim(){
     return;
 };
 
-void PointSim::CreateCameras(VisualSlamBase::Camera& camera_left,VisualSlamBase::Camera& camera_right){
+void PointSim::CreateCameras(Camera& camera_left,Camera& camera_right){
     camera_l = camera_left;
     camera_r = camera_right;
     return;
@@ -41,7 +41,7 @@ void PointSim::CreateRandomPoints(int no_of_points,float cube_dimension){
     return;
 };
 
-cv::KeyPoint PointSim::ProjectPoints(Eigen::Vector3f point_3d,VisualSlamBase::Camera camera){
+cv::KeyPoint PointSim::ProjectPoints(Eigen::Vector3f point_3d,Camera camera){
     Eigen::Vector3f pixel_coordinates;
 
     pixel_coordinates = camera.intrinsics * point_3d;
@@ -74,8 +74,8 @@ void PointSim::CreateFrames(){
 
 
     for(auto point : point_list){
-        VisualSlamBase::Framepoint* fp1 = new VisualSlamBase::Framepoint;
-        VisualSlamBase::Framepoint* fp2 = new VisualSlamBase::Framepoint;
+        Framepoint* fp1 = new Framepoint;
+        Framepoint* fp2 = new Framepoint;
 
         // Initialize
         fp1->associated_landmark = NULL;

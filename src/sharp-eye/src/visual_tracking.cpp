@@ -2,11 +2,11 @@
 #include<sophus/se3.hpp>
 #include<opencv2/calib3d/calib3d.hpp>
 
-typedef std::vector<VisualSlamBase::KeypointWD> FeatureVector;
-typedef std::vector<VisualSlamBase::Framepoint> FramepointVector;
-typedef std::vector<VisualSlamBase::Frame> FrameVector;
-typedef std::vector<std::pair<VisualSlamBase::KeypointWD,VisualSlamBase::KeypointWD>> MatchVector;
-typedef VisualSlamBase::Camera Camera;
+typedef std::vector<KeypointWD> FeatureVector;
+typedef std::vector<Framepoint> FramepointVector;
+typedef std::vector<Frame> FrameVector;
+typedef std::vector<std::pair<KeypointWD,KeypointWD>> MatchVector;
+typedef Camera Camera;
 typedef std::chrono::high_resolution_clock _Clock; 
 typedef std::chrono::_V2::high_resolution_clock::time_point _Time;
 
@@ -47,19 +47,19 @@ int VisualTracking::FindCorrespondences(FramepointVector &previous_frame,Framepo
     int correspondences = 0;
     
     // Sort Previous
-    std::sort(previous_frame.begin(),previous_frame.end(),[](const VisualSlamBase::Framepoint& a,const VisualSlamBase::Framepoint& b){
+    std::sort(previous_frame.begin(),previous_frame.end(),[](const Framepoint& a,const Framepoint& b){
         return ((a.keypoint_l.keypoint.pt.y < b.keypoint_l.keypoint.pt.y)||
         (a.keypoint_l.keypoint.pt.y == b.keypoint_l.keypoint.pt.y && a.keypoint_l.keypoint.pt.x < b.keypoint_l.keypoint.pt.x));
     });
 
     // Sort Current
-    std::sort(current_frame.begin(),current_frame.end(),[](const VisualSlamBase::Framepoint& a,const VisualSlamBase::Framepoint& b){
+    std::sort(current_frame.begin(),current_frame.end(),[](const Framepoint& a,const Framepoint& b){
         return ((a.keypoint_l.keypoint.pt.y < b.keypoint_l.keypoint.pt.y)||
         (a.keypoint_l.keypoint.pt.y == b.keypoint_l.keypoint.pt.y && a.keypoint_l.keypoint.pt.x < b.keypoint_l.keypoint.pt.x));
     });
     // We use the previous frame as the query frame
 
-    for(VisualSlamBase::Framepoint &query_framepoint : previous_frame){
+    for(Framepoint &query_framepoint : previous_frame){
         // Break Condition
         int id_current = 0;
         std::vector<int> match_shortlist; // Framepoints found in the rectangular search region
@@ -142,8 +142,8 @@ int VisualTracking::FindCorrespondences(FramepointVector &previous_frame,Framepo
         int current_frame_idx = match_shortlist[good_matches[0].trainIdx];
         query_framepoint.next = &current_frame[current_frame_idx];
         current_frame[current_frame_idx].previous = &query_framepoint;
-        //query_framepoint.next = boost::make_shared<VisualSlamBase::Framepoint>( current_frame[current_frame_idx]);
-        //current_frame[current_frame_idx].previous = boost::make_shared<VisualSlamBase::Framepoint>(query_framepoint);
+        //query_framepoint.next = boost::make_shared<Framepoint>( current_frame[current_frame_idx]);
+        //current_frame[current_frame_idx].previous = boost::make_shared<Framepoint>(query_framepoint);
         correspondences++;
     };
 
@@ -226,11 +226,11 @@ Eigen::Matrix<float,4,6> VisualTracking::FindJacobian(Eigen::Vector3f& left_cam_
     return J;
 };
 
-Eigen::Transform<float,3,2> VisualTracking::EstimateIncrementalMotion(VisualSlamBase::Frame &frame_ptr){
+Eigen::Transform<float,3,2> VisualTracking::EstimateIncrementalMotion(Frame &frame_ptr){
     optimizer->parameters.T_caml2camr = T_caml2camr;
      
-    VisualSlamBase::LocalMap* lmap_ptr = map.GetLastLocalMap();
-    VisualSlamBase::Frame* previous_frame_ptr = lmap_ptr->GetPreviousFrame();
+    LocalMap* lmap_ptr = map.GetLastLocalMap();
+    Frame* previous_frame_ptr = lmap_ptr->GetPreviousFrame();
     optimizer->Initialize(&frame_ptr,previous_frame_ptr,lmap_ptr);
     optimizer->OptimizeOnce();
     optimizer->Converge();
@@ -238,7 +238,7 @@ Eigen::Transform<float,3,2> VisualTracking::EstimateIncrementalMotion(VisualSlam
     return frame_ptr.T_world2cam;
 };
 
-VisualTracking::ManifoldDerivative VisualTracking::CalculateMotionJacobian(VisualSlamBase::Frame* current_frame_ptr,VisualSlamBase::Frame* previous_frame_ptr){
+VisualTracking::ManifoldDerivative VisualTracking::CalculateMotionJacobian(Frame* current_frame_ptr,Frame* previous_frame_ptr){
     /**
      * @brief Time differentials on SE3 are calculated as deltaT = T1.inverse() * T2
      * 
@@ -261,7 +261,7 @@ VisualTracking::ManifoldDerivative VisualTracking::CalculateMotionJacobian(Visua
 };
 
 
-Eigen::Transform<float,3,2> VisualTracking::CalculatePosePrediction(VisualSlamBase::Frame* frame_ptr){
+Eigen::Transform<float,3,2> VisualTracking::CalculatePosePrediction(Frame* frame_ptr){
     /**
      * @brief The method of performing pose prediction on SE3 involves a small hack
      * Tpredicted = T1 + deltaT;
@@ -337,16 +337,16 @@ void VisualTracking::InitializeNode(){
     if(map.local_maps.empty()){
         // No local maps have been create yet - this is probably the first local map.
         map.CreateNewLocalMap();
-        VisualSlamBase::LocalMap* lmap_ptr = map.GetLastLocalMap();
+        LocalMap* lmap_ptr = map.GetLastLocalMap();
 
         // Create a new frame
         lmap_ptr->CreateNewFrame(img_l,img_r,framepoint_vec);
         
         // Get a raw pointer to the frame
-        VisualSlamBase::Frame* frame_ptr = lmap_ptr->GetLastFrame();
+        Frame* frame_ptr = lmap_ptr->GetLastFrame();
         
         // Framepoint initialization 
-        for(VisualSlamBase::Framepoint& framepoint : frame_ptr->points){
+        for(Framepoint& framepoint : frame_ptr->points){
             framepoint.world_coordinates = framepoint.camera_coordinates;
             framepoint.landmark_set = false;
             framepoint.inlier = false;
@@ -366,7 +366,7 @@ void VisualTracking::InitializeNode(){
     else{
         // If local maps are not empty, then we are currently working on a local map.
         // - Get the current local map we are working with
-        VisualSlamBase::LocalMap* current_lmap = map.GetLastLocalMap();
+        LocalMap* current_lmap = map.GetLastLocalMap();
     
         // The frames are not empty. The first frame has been set.
         // There is atleast one more frame in the local map
@@ -375,8 +375,8 @@ void VisualTracking::InitializeNode(){
         // frame and the previous one. 
 
         current_lmap->CreateNewFrame(img_l,img_r,framepoint_vec);
-        VisualSlamBase::Frame* frame_ptr = current_lmap->GetLastFrame();
-        VisualSlamBase::Frame* prev_frame_ptr = current_lmap->GetPreviousFrame();
+        Frame* frame_ptr = current_lmap->GetLastFrame();
+        Frame* prev_frame_ptr = current_lmap->GetPreviousFrame();
         // TODO : what if the framepoint vector is empty ? 
         frame_ptr->camera_l = camera_left;
         frame_ptr->camera_r = camera_right;
@@ -394,7 +394,7 @@ void VisualTracking::InitializeNode(){
             
             // Creating new local map
             map.CreateNewLocalMap();
-            VisualSlamBase::LocalMap* lmap_ptr = map.GetLastLocalMap();
+            LocalMap* lmap_ptr = map.GetLastLocalMap();
 
             // Creating a new frame for the new local map
             lmap_ptr->CreateNewFrame(img_l,img_r,framepoint_vec);
@@ -424,7 +424,7 @@ void VisualTracking::InitializeNode(){
                 lmap_ptr->T_map2world = prev_frame_ptr->T_cam2world;
             };
             // Setting the frame world coordinates
-            for(VisualSlamBase::Framepoint& framepoint : frame_ptr->points){
+            for(Framepoint& framepoint : frame_ptr->points){
                 framepoint.world_coordinates = frame_ptr->T_world2cam * framepoint.camera_coordinates;
                 framepoint.landmark_set = false;
                 framepoint.inlier = false;
@@ -441,7 +441,7 @@ void VisualTracking::InitializeNode(){
                 frame_ptr->T_world2cam = prev_frame_ptr->T_world2cam;
                 frame_ptr->T_cam2world = frame_ptr->T_world2cam.inverse();
                 
-                for(VisualSlamBase::Framepoint& framepoint : frame_ptr->points){
+                for(Framepoint& framepoint : frame_ptr->points){
                     framepoint.world_coordinates = frame_ptr->T_world2cam*framepoint.camera_coordinates;
                     framepoint.landmark_set = false;
                     framepoint.inlier = false;
@@ -457,7 +457,7 @@ void VisualTracking::InitializeNode(){
                 frame_ptr->T_world2cam = prev_frame_ptr->T_world2cam;
                 frame_ptr->T_cam2world = prev_frame_ptr->T_cam2world;
 
-                for(VisualSlamBase::Framepoint& framepoint : frame_ptr->points){
+                for(Framepoint& framepoint : frame_ptr->points){
                     framepoint.world_coordinates = frame_ptr->T_world2cam * framepoint.camera_coordinates;
                     framepoint.landmark_set = false;
                     framepoint.inlier = false;

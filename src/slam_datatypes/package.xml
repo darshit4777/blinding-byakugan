@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>types</name>
+  <name>slam_datatypes</name>
   <version>0.0.0</version>
   <description>The types package</description>
 

@@ -7,8 +7,30 @@ project(slam_datatypes)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
+list(APPEND CMAKE_MODULE_PATH "/home/darshit/blinding-byakugan/src/g2o/cmake_modules")
+
+find_package(G2O REQUIRED)
+include_directories( ${G2O_INCLUDE_DIRS} )
+add_definitions( ${G2O_DEFINITIONS} )
+link_directories( ${G2O_LIBRARY_DIRS} )
+
+find_package( PCL 1.8 REQUIRED )
+include_directories( ${PCL_INCLUDE_DIRS} )
+add_definitions( ${PCL_DEFINITIONS} )
+link_directories( ${PCL_LIBRARY_DIRS} )
+
+
+find_package( OpenCV REQUIRED )
+include_directories( ${OpenCV_INCLUDE_DIRS} )
+
+## System dependencies are found with CMake's conventions
+find_package(Boost REQUIRED COMPONENTS system)
+
 find_package(catkin REQUIRED COMPONENTS
-  opencv2
+  tf2_ros
+  tf
+  tf2
+  tf2_geometry_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -101,7 +123,10 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
+  INCLUDE_DIRS include
+  ${OpenCV_INCLUDE_DIRS}
+  ${PCL_INCLUDE_DIRS}
+  ${G2O_INCLUDE_DIRS}
 #  LIBRARIES types
 #  CATKIN_DEPENDS opencv2
 #  DEPENDS system_lib
@@ -114,14 +139,20 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-# include
+  include
   ${catkin_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
+  ${PCL_INCLUDE_DIRS}
+  ${G2O_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
-# add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/types.cpp
-# )
+add_library(world_map
+  src/world_map.cpp
+)
+add_library(local_map
+  src/local_map.cpp
+)
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries

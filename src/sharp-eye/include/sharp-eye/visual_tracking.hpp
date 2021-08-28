@@ -1,12 +1,12 @@
 #pragma once
-#include <sharp-eye/visual_slam_base.hpp>
+#include<slam_datatypes/slam_datatypes.hpp>
 #include<sharp-eye/pose_optimizer.hpp>
 #include <chrono>
-typedef std::vector<VisualSlamBase::KeypointWD> FeatureVector;
-typedef std::vector<VisualSlamBase::Framepoint> FramepointVector;
-typedef std::vector<VisualSlamBase::Frame> FrameVector;
-typedef std::vector<std::pair<VisualSlamBase::KeypointWD,VisualSlamBase::KeypointWD>> MatchVector;
-typedef VisualSlamBase::Camera Camera;
+typedef std::vector<KeypointWD> FeatureVector;
+typedef std::vector<Framepoint> FramepointVector;
+typedef std::vector<Frame> FrameVector;
+typedef std::vector<std::pair<KeypointWD,KeypointWD>> MatchVector;
+typedef Camera Camera;
 typedef std::chrono::high_resolution_clock _Clock; 
 typedef std::chrono::_V2::high_resolution_clock::time_point _Time;
 
@@ -23,7 +23,7 @@ class VisualTracking{
     public:
     
     // Vector to store frames
-    VisualSlamBase::WorldMap map;
+    WorldMap map;
     Camera camera_left;
     Camera camera_right;
 
@@ -99,7 +99,7 @@ class VisualTracking{
      * @param frame_ptr 
      * @return Eigen::Transform<float,3,2> 
      */
-    Eigen::Transform<float,3,2> EstimateIncrementalMotion(VisualSlamBase::Frame &frame_ptr);
+    Eigen::Transform<float,3,2> EstimateIncrementalMotion(Frame &frame_ptr);
 
     /**
      * @brief Calculates the jacobian of the motion wrt time.
@@ -109,7 +109,7 @@ class VisualTracking{
      * @param previous_frame_ptr
      * @return TimeDerivative 
      */
-    ManifoldDerivative CalculateMotionJacobian(VisualSlamBase::Frame* current_frame_ptr,VisualSlamBase::Frame* previous_frame_ptr);
+    ManifoldDerivative CalculateMotionJacobian(Frame* current_frame_ptr,Frame* previous_frame_ptr);
 
     /**
      * @brief Calculates the predicted pose using a constant 
@@ -119,7 +119,7 @@ class VisualTracking{
      * @param time_derivative 
      * @return Eigen::Transform<float,3,2> 
      */
-    Eigen::Transform<float,3,2> CalculatePosePrediction(VisualSlamBase::Frame* frame_ptr);
+    Eigen::Transform<float,3,2> CalculatePosePrediction(Frame* frame_ptr);
 
     /**
      * @brief Sets the Prediction Call Time 

@@ -1,10 +1,10 @@
 #pragma once
-#include <sharp-eye/visual_slam_base.hpp>
-typedef std::vector<VisualSlamBase::KeypointWD> FeatureVector;
-typedef std::vector<VisualSlamBase::Framepoint> FramepointVector;
-typedef std::vector<VisualSlamBase::Frame> FrameVector;
-typedef std::vector<std::pair<VisualSlamBase::KeypointWD,VisualSlamBase::KeypointWD>> MatchVector;
-typedef VisualSlamBase::Camera Camera;
+#include <slam_datatypes/slam_datatypes.hpp>
+typedef std::vector<KeypointWD> FeatureVector;
+typedef std::vector<Framepoint> FramepointVector;
+typedef std::vector<Frame> FrameVector;
+typedef std::vector<std::pair<KeypointWD,KeypointWD>> MatchVector;
+typedef Camera Camera;
 
 class PoseOptimizer{
     public:
@@ -49,11 +49,11 @@ class PoseOptimizer{
     int inliers;
 
     // Frame Pointers
-    VisualSlamBase::Frame* current_frame_ptr;
-    VisualSlamBase::Frame* previous_frame_ptr;
+    Frame* current_frame_ptr;
+    Frame* previous_frame_ptr;
 
     // Local Map
-    VisualSlamBase::LocalMap* lmap_ptr;
+    LocalMap* lmap_ptr;
 
     // Camera Coordinates
     Eigen::Vector3f p_caml,p_camr;
@@ -81,7 +81,7 @@ class PoseOptimizer{
      * @brief Initializes all the pose optimizer variables
      * 
      */
-    void Initialize(VisualSlamBase::Frame* curr_frame_ptr,VisualSlamBase::Frame* prev_frame_ptr,VisualSlamBase::LocalMap* local_map_ptr);
+    void Initialize(Frame* curr_frame_ptr,Frame* prev_frame_ptr,LocalMap* local_map_ptr);
 
     /**
      * @brief Runs the optimization loop once
@@ -129,13 +129,13 @@ class PoseOptimizer{
      * checks for invalid points and then computes the reprojection error
      * 
      */
-    void ComputeError(VisualSlamBase::Framepoint fp);
+    void ComputeError(Framepoint fp);
     
     /**
      * @brief Assembles the H, b and omega matrices
      * 
      */
-    void Linearize(VisualSlamBase::Framepoint fp);
+    void Linearize(Framepoint fp);
 
     /**
      * @brief Solves for Dx and transforms it into the SE3 form

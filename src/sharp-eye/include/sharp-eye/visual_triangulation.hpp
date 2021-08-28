@@ -1,5 +1,5 @@
 #pragma once
-#include <sharp-eye/visual_slam_base.hpp>
+#include <slam_datatypes/slam_datatypes.hpp>
 
 
 class VisualTriangulation{
@@ -12,8 +12,8 @@ class VisualTriangulation{
 
     public:    
     // Cameras
-    VisualSlamBase::Camera camera_l; //< Left camera intrinsics
-    VisualSlamBase::Camera camera_r; //< Right camera intrinsics
+    Camera camera_l; //< Left camera intrinsics
+    Camera camera_r; //< Right camera intrinsics
     float camera_baseline;
     float focal_length_x;
     float focal_length_y;
@@ -21,8 +21,8 @@ class VisualTriangulation{
     // Feature Handling
     cv::Ptr<cv::FeatureDetector> orb_detector;
     cv::Ptr<cv::DescriptorExtractor> orb_descriptor;
-    std::vector<VisualSlamBase::KeypointWD> keypoints_l;
-    std::vector<VisualSlamBase::KeypointWD> keypoints_r;
+    std::vector<KeypointWD> keypoints_l;
+    std::vector<KeypointWD> keypoints_r;
     int detection_threshold;
 
     cv::FlannBasedMatcher matcher;
@@ -32,9 +32,9 @@ class VisualTriangulation{
     cv::Mat image_l;
     cv::Mat image_r;
 
-    typedef std::vector<VisualSlamBase::KeypointWD> FeatureVector;
-    typedef std::vector<VisualSlamBase::Framepoint> FramepointVector;
-    typedef std::vector<std::pair<VisualSlamBase::KeypointWD,VisualSlamBase::KeypointWD>> MatchVector;
+    typedef std::vector<KeypointWD> FeatureVector;
+    typedef std::vector<Framepoint> FramepointVector;
+    typedef std::vector<std::pair<KeypointWD,KeypointWD>> MatchVector;
 
     // Methods
     /**
@@ -51,7 +51,7 @@ class VisualTriangulation{
      * of keypoints
      * 
      * @param img_ptr 
-     * @return std::vector<VisualSlamBase::KeypointWD> 
+     * @return std::vector<KeypointWD> 
      */
     FeatureVector DetectFeatures(cv::Mat* img_ptr,bool draw);
 

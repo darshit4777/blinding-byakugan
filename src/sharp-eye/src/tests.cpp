@@ -26,8 +26,8 @@ bool received_l,received_r;
 //static const std::string OPENCV_WINDOW = "Image window";
 static const std::string OPENCV_WINDOW_LEFT = "Left Image window";
 static const std::string OPENCV_WINDOW_RIGHT = "Right Image window";
-typedef std::vector<std::pair<VisualSlamBase::KeypointWD,VisualSlamBase::KeypointWD>> MatchVector;
-typedef std::vector<VisualSlamBase::Framepoint> FramepointVector;
+typedef std::vector<std::pair<KeypointWD,KeypointWD>> MatchVector;
+typedef std::vector<Framepoint> FramepointVector;
 
 
 
@@ -62,7 +62,7 @@ class TestDetectFeatures{
         
 
         VisualTriangulation triangulator;
-        std::vector<VisualSlamBase::KeypointWD> features;
+        std::vector<KeypointWD> features;
         while(ros::ok()){
             ros::spinOnce();
             if(received_l){
@@ -96,8 +96,8 @@ class TestGetMatchedKeypoints{
     }
     void TestMain(){
         VisualTriangulation triangulator;
-        std::vector<VisualSlamBase::KeypointWD> features_l;
-        std::vector<VisualSlamBase::KeypointWD> features_r;
+        std::vector<KeypointWD> features_l;
+        std::vector<KeypointWD> features_r;
         int count = 0;
         while(ros::ok()){
             ros::spinOnce();
@@ -175,8 +175,8 @@ class TestGenerate3DCoordinates{
 
     void TestMain(){
         VisualTriangulation triangulator;
-        std::vector<VisualSlamBase::KeypointWD> features_l;
-        std::vector<VisualSlamBase::KeypointWD> features_r;
+        std::vector<KeypointWD> features_l;
+        std::vector<KeypointWD> features_r;
         pub = nh.advertise< sensor_msgs::PointCloud2 > ("point_cloud", 5);
         int count = 0;
         while(ros::ok()){
@@ -245,7 +245,7 @@ class TestFindCorrespondences{
     public:
     Camera cam_left;
     Camera cam_right;
-    std::vector<VisualSlamBase::Frame> frames;
+    std::vector<Frame> frames;
     TestFindCorrespondences(){
         // Initializing Camera Matrices
         cam_left.intrinsics << 458.654,     0.0,    367.215,
@@ -262,8 +262,8 @@ class TestFindCorrespondences{
     void TestMain(){
         VisualTracking tracking(cam_left,cam_right);
         VisualTriangulation triangulator;
-        std::vector<VisualSlamBase::KeypointWD> features_l;
-        std::vector<VisualSlamBase::KeypointWD> features_r;
+        std::vector<KeypointWD> features_l;
+        std::vector<KeypointWD> features_r;
 
         while(ros::ok()){
             ros::spinOnce();
@@ -281,7 +281,7 @@ class TestFindCorrespondences{
 
                 FramepointVector framepoints;
                 triangulator.Generate3DCoordinates(matches,framepoints,0.11,457.95,cam_left.intrinsics);
-                VisualSlamBase::Frame current_frame;
+                Frame current_frame;
                 current_frame.points = framepoints;
                 frames.push_back(current_frame);
                 current_frame.points.clear();
@@ -315,8 +315,8 @@ class TestIncrementalMotion{
 
     // Triangulation
     VisualTriangulation triangulator;
-    std::vector<VisualSlamBase::KeypointWD> features_l;
-    std::vector<VisualSlamBase::KeypointWD> features_r;
+    std::vector<KeypointWD> features_l;
+    std::vector<KeypointWD> features_r;
 
     VisualTracking* tracking;
     
@@ -417,10 +417,10 @@ class TestIncrementalMotion{
                 tracking->InitializeNode();
 
                 // Perform tracking by estimating the new pose
-                VisualSlamBase::Frame* current_frame;
+                Frame* current_frame;
                 
                 Eigen::Transform<float,3,2> new_pose;
-                VisualSlamBase::LocalMap* lmap_ptr = tracking->map.GetLastLocalMap();
+                LocalMap* lmap_ptr = tracking->map.GetLastLocalMap();
                 current_frame = lmap_ptr->GetLastFrame();
                 
                 // TODO : This is a band-aid patch - not quite elegant. A better solution would be to use class variables 
@@ -436,7 +436,7 @@ class TestIncrementalMotion{
                 
                 // Calculate Motion Derivative
                 if(tracking->map.local_maps[0]->frames.size() > 1){
-                    VisualSlamBase::Frame* previous_frame;
+                    Frame* previous_frame;
                     previous_frame = lmap_ptr->GetPreviousFrame();
                     tracking->CalculateMotionJacobian(current_frame,previous_frame);
                 }
@@ -568,7 +568,7 @@ class TestPoseOptimizer{
     void TestMain(){
 
         optimizer->parameters.T_caml2camr = point_sim->T_caml2camr;
-        VisualSlamBase::LocalMap* lmap_ptr;
+        LocalMap* lmap_ptr;
         optimizer->Initialize(&point_sim->current_frame,&point_sim->previous_frame,lmap_ptr);
 
         optimizer->OptimizeOnce();

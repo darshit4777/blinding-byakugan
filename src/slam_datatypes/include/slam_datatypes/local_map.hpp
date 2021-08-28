@@ -5,11 +5,14 @@
 #include <g2o/core/optimizable_graph.h>
 #include <boost/smart_ptr.hpp>
 #include <boost/shared_ptr.hpp>
+#include <slam_datatypes/frame.hpp>
+#include <slam_datatypes/landmark.hpp>
+#include <slam_datatypes/framepoint.hpp>
 
 class LocalMap{
     typedef boost::shared_ptr<Frame> FrameSharedPtr;
     typedef boost::shared_ptr<Landmark> LandmarkSharedPtr;
-    typedef std::vector<VisualSlamBase::Framepoint> FramepointVector;
+    typedef std::vector<Framepoint> FramepointVector;
     public:
     Eigen::Transform<float,3,2> T_map2world, T_world2map;
     std::vector<FrameSharedPtr> frames; // enclosed frames

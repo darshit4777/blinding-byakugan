@@ -1,8 +1,8 @@
 #include <sharp-eye/visual_triangulation.hpp>
 
-typedef std::vector<VisualSlamBase::KeypointWD> FeatureVector;
-typedef std::vector<VisualSlamBase::Framepoint> FramepointVector;
-typedef std::vector<std::pair<VisualSlamBase::KeypointWD,VisualSlamBase::KeypointWD>> MatchVector;
+typedef std::vector<KeypointWD> FeatureVector;
+typedef std::vector<Framepoint> FramepointVector;
+typedef std::vector<std::pair<KeypointWD,KeypointWD>> MatchVector;
 
 VisualTriangulation::VisualTriangulation(){
         
@@ -42,7 +42,7 @@ FeatureVector VisualTriangulation::DetectFeatures(cv::Mat* img_ptr,bool draw){
     };
     // Copy over the keypoints vector into the feature vector
     for(cv::KeyPoint keypoint : keypoints){
-        VisualSlamBase::KeypointWD feature;
+        KeypointWD feature;
         feature.keypoint = keypoint;
         features.push_back(feature);
     }
@@ -66,7 +66,7 @@ FeatureVector VisualTriangulation::DetectAndComputeFeatures(cv::Mat* img_ptr,Fea
     // Copy over the keypoints vector into the feature vector
     
     for(int i = 0; i < keypoints.size(); i++){
-        VisualSlamBase::KeypointWD feature;
+        KeypointWD feature;
         feature.keypoint = keypoints[i];
         feature.descriptor = cv::Mat(descriptors.row(i));
         features.push_back(feature);
@@ -92,13 +92,13 @@ FeatureVector VisualTriangulation::ExtractKeypointDescriptors(cv::Mat* img_ptr,F
     }
     
     std::vector<cv::KeyPoint> keypoints;
-    for(VisualSlamBase::KeypointWD &feature : feature_vec){
+    for(KeypointWD &feature : feature_vec){
         cv::Mat descriptor;
         keypoints.push_back(feature.keypoint);
         orb_descriptor->compute(*img_ptr,keypoints,descriptor);
         feature.descriptor = descriptor;
 
-        VisualSlamBase::KeypointWD out_feature;
+        KeypointWD out_feature;
         out_feature = feature;
         out_feature.descriptor = descriptor;
         out_vec.push_back(out_feature);
@@ -164,8 +164,8 @@ MatchVector VisualTriangulation::GetKeypointMatches(FeatureVector &left_vec, Fea
 
     
     for(int i = 0; i < good_matches.size(); i++){
-        VisualSlamBase::KeypointWD keypoint_l, keypoint_r;
-        std::pair<VisualSlamBase::KeypointWD,VisualSlamBase::KeypointWD> matched_pair;
+        KeypointWD keypoint_l, keypoint_r;
+        std::pair<KeypointWD,KeypointWD> matched_pair;
         
         keypoint_l = left_vec[good_matches[i].queryIdx];
         keypoint_r = right_vec[good_matches[i].trainIdx];
@@ -194,7 +194,7 @@ FramepointVector VisualTriangulation::Generate3DCoordinates(MatchVector &matched
     for(int i =0; i < matched_features.size(); i++){
         // Each matched feature is stored as a pair of KeypointWD
         // The first is left and the second is right
-        VisualSlamBase::Framepoint framepoint;
+        Framepoint framepoint;
         framepoint.keypoint_l = matched_features[i].first;
         framepoint.keypoint_r = matched_features[i].second;
 
@@ -235,12 +235,12 @@ MatchVector VisualTriangulation::GetEpipolarMatches(FeatureVector &left_vec, Fea
     // Large sorting expression that is explained in the ProSLAM paper
 
     // Sort Left
-    std::sort(left_vec.begin(),left_vec.end(),[](const VisualSlamBase::KeypointWD& a,const VisualSlamBase::KeypointWD& b){
+    std::sort(left_vec.begin(),left_vec.end(),[](const KeypointWD& a,const KeypointWD& b){
         return ((a.keypoint.pt.y < b.keypoint.pt.y)||(a.keypoint.pt.y == b.keypoint.pt.y && a.keypoint.pt.x < b.keypoint.pt.x));
     });
 
     // Sort Right
-    std::sort(right_vec.begin(),right_vec.end(),[](const VisualSlamBase::KeypointWD& a,const VisualSlamBase::KeypointWD& b){
+    std::sort(right_vec.begin(),right_vec.end(),[](const KeypointWD& a,const KeypointWD& b){
         return ((a.keypoint.pt.y < b.keypoint.pt.y)||(a.keypoint.pt.y == b.keypoint.pt.y && a.keypoint.pt.x < b.keypoint.pt.x));
     });
 
@@ -290,7 +290,7 @@ MatchVector VisualTriangulation::GetEpipolarMatches(FeatureVector &left_vec, Fea
         };
         //check if something was found
         if (dist_best < maximum_matching_distance) {
-            std::pair<VisualSlamBase::KeypointWD,VisualSlamBase::KeypointWD> matched_pair;
+            std::pair<KeypointWD,KeypointWD> matched_pair;
             matched_pair.first = left_vec[idx_L];
             matched_pair.second = right_vec[idx_best_R];
             

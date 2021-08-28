@@ -3,11 +3,11 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/core.hpp>
 
-typedef std::vector<VisualSlamBase::KeypointWD> FeatureVector;
-typedef std::vector<VisualSlamBase::Framepoint> FramepointVector;
-typedef std::vector<VisualSlamBase::Frame> FrameVector;
-typedef std::vector<std::pair<VisualSlamBase::KeypointWD,VisualSlamBase::KeypointWD>> MatchVector;
-typedef VisualSlamBase::Camera Camera;
+typedef std::vector<KeypointWD> FeatureVector;
+typedef std::vector<Framepoint> FramepointVector;
+typedef std::vector<Frame> FrameVector;
+typedef std::vector<std::pair<KeypointWD,KeypointWD>> MatchVector;
+typedef Camera Camera;
 
 PoseOptimizer::PoseOptimizer(){
     // Setting all params
@@ -53,7 +53,7 @@ PoseOptimizer::PoseOptimizer(){
     return;
 };
 
-void PoseOptimizer::Initialize(VisualSlamBase::Frame* curr_frame_ptr,VisualSlamBase::Frame* prev_frame_ptr,VisualSlamBase::LocalMap* local_map_ptr){
+void PoseOptimizer::Initialize(Frame* curr_frame_ptr,Frame* prev_frame_ptr,LocalMap* local_map_ptr){
     // This needs to be called once before the OptimizeOnce can be used
 
     current_frame_ptr = curr_frame_ptr;
@@ -82,7 +82,7 @@ void PoseOptimizer::Initialize(VisualSlamBase::Frame* curr_frame_ptr,VisualSlamB
     return;
 };
 
-void PoseOptimizer::ComputeError(VisualSlamBase::Framepoint fp){
+void PoseOptimizer::ComputeError(Framepoint fp){
     /**
      * @brief Transforms the camera coordinates of points from the previous frame
      * to the current frame with an estimate of T_prev2curr. 
@@ -95,7 +95,7 @@ void PoseOptimizer::ComputeError(VisualSlamBase::Framepoint fp){
         return;
     }
     
-    //std::vector<VisualSlamBase::Framepoint> fp_1,fp_2;
+    //std::vector<Framepoint> fp_1,fp_2;
     //fp_1.push_back(*fp);
     //fp_2.push_back(*fp->previous);
     //VisualizeFramepointComparision(fp_1,current_frame_ptr->image_l,fp_2,current_frame_ptr->image_l);
@@ -203,7 +203,7 @@ bool PoseOptimizer::HasInf(Eigen::Vector3f vec){
     return false;
 };
 
-void PoseOptimizer::Linearize(VisualSlamBase::Framepoint fp){
+void PoseOptimizer::Linearize(Framepoint fp){
     /**
      * @brief In this function we compute / update H, b and omega
      * 
@@ -390,18 +390,18 @@ void PoseOptimizer::Update(){
     current_frame_ptr->T_world2cam = current_frame_ptr->T_cam2world.inverse();
 
     // Update the landmarks
-    //for(VisualSlamBase::Framepoint& fp : current_frame_ptr->points){
+    //for(Framepoint& fp : current_frame_ptr->points){
     //    fp.world_coordinates = current_frame_ptr->T_world2cam * fp.camera_coordinates;
     //    // Now the pose is refined - let us make them into landmarks
     //    if(fp.inlier && !fp.landmark_set){
     //        
     //        // Creating a new landmark
-    //        VisualSlamBase::Landmark landmark;
+    //        Landmark landmark;
     //        // Storing the landmark in the current local map
     //        lmap_ptr->associated_landmarks.push_back(landmark);
     //        
     //        // Now working with a landmark pointer once the stack pointer is assigned
-    //        VisualSlamBase::Landmark* landmark_ptr = &lmap_ptr->associated_landmarks.back();
+    //        Landmark* landmark_ptr = &lmap_ptr->associated_landmarks.back();
     //        landmark_ptr->world_coordinates = fp.world_coordinates;
     //        landmark_ptr->origin = &fp;
     //        
@@ -432,7 +432,7 @@ void PoseOptimizer::OptimizeOnce(){
     //cv::cvtColor(current_frame_ptr->image_l,_img_left,CV_GRAY2BGR);   
     //cv::cvtColor(current_frame_ptr->image_r,_img_right,CV_GRAY2BGR);
 
-    for(VisualSlamBase::Framepoint fp : current_frame_ptr->points){
+    for(Framepoint fp : current_frame_ptr->points){
         ComputeError(fp);
         Linearize(fp);
     };
@@ -488,7 +488,7 @@ void PoseOptimizer::VisualizeFramepoints(FramepointVector fp_vec,cv::Mat& image,
     
     //keypoint = fp.keypoint_l.keypoint;
 
-    for(VisualSlamBase::Framepoint& fp : fp_vec){
+    for(Framepoint& fp : fp_vec){
         cv::KeyPoint keypoint;
         if(cam == 0){
             keypoint = fp.keypoint_l.keypoint;
@@ -520,12 +520,12 @@ void PoseOptimizer::VisualizeFramepointComparision(FramepointVector fp_vec1,cv::
     cv::cvtColor(image_1, img_rgb1, CV_GRAY2RGB);
     cv::cvtColor(image_2, img_rgb2, CV_GRAY2RGB);
 
-    for(VisualSlamBase::Framepoint& fp : fp_vec1){
+    for(Framepoint& fp : fp_vec1){
         cv::KeyPoint keypoint;
         keypoint = fp.keypoint_l.keypoint;
         cv::circle(img_rgb1,keypoint.pt,3,cv::Scalar(0,0,255),CV_FILLED);
     };
-    for(VisualSlamBase::Framepoint& fp : fp_vec2){
+    for(Framepoint& fp : fp_vec2){
         cv::KeyPoint keypoint;
         keypoint = fp.keypoint_l.keypoint;
         cv::circle(img_rgb2,keypoint.pt,3,cv::Scalar(255,0,0),CV_FILLED);

@@ -1,4 +1,4 @@
-#include<sharp-eye/visual_slam_base.hpp>
+#include <slam_datatypes/slam_datatypes.hpp>
 
 class PointSim{
     /**
@@ -20,12 +20,12 @@ class PointSim{
     Eigen::Transform<float,3,2> T_caml2camr;
 
     // Frames
-    VisualSlamBase::Frame current_frame;
-    VisualSlamBase::Frame previous_frame;
+    Frame current_frame;
+    Frame previous_frame;
 
     // Cameras
-    VisualSlamBase::Camera camera_l;
-    VisualSlamBase::Camera camera_r;
+    Camera camera_l;
+    Camera camera_r;
 
     /**
      * @brief Construct a new Point Sim object
@@ -37,7 +37,7 @@ class PointSim{
      * @brief Create Cameras
      * 
      */
-    void CreateCameras(VisualSlamBase::Camera& camera_left,VisualSlamBase::Camera& camera_right);
+    void CreateCameras(Camera& camera_left,Camera& camera_right);
 
     /**
      * @brief Set the positions of the cameras ie, their T_world2cam transforms.
@@ -76,7 +76,7 @@ class PointSim{
      */
     void CreateFrames(); 
 
-    cv::KeyPoint ProjectPoints(Eigen::Vector3f point_3d,VisualSlamBase::Camera camera);
+    cv::KeyPoint ProjectPoints(Eigen::Vector3f point_3d,Camera camera);
 
     bool InFieldOfView(cv::KeyPoint keypoint_l,cv::KeyPoint keypoint_r);
 };
