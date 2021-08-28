@@ -36,11 +36,6 @@ void Landmark::PoseOptimizer::Initialize(Eigen::Vector3f world_coordinates_){
     // Set the initial estimate of world coordinates as the original location 
     estimated_world_coordinates = world_coordinates_;
 
-    // We might not need this
-    this->params.T_caml2camr.setIdentity();
-    this->params.T_caml2camr.translation() << 0.0, 0.0, 0.11074;
-    this->params.T_caml2camr.rotation().Identity();
-
     // Initializing errors
     iteration_error = 0;
     total_error = 0;
@@ -51,16 +46,11 @@ void Landmark::PoseOptimizer::Initialize(Eigen::Vector3f world_coordinates_){
 void Landmark::PoseOptimizer::ComputeError(Framepoint& fp){
 
     /**
-     * @brief We compute the error by projecting the current world coordinates
-     * of the landmark to the camera coordinates of the frame where the framepoint
-     * was captured.
-     * 
-     * The camera coordinates so generated are then projected to produce predicted 
-     * pixels for frame. These pixels are considered as the "movables"
-     * 
-     * Reprojection error is then calculated by comparing these pixels to "fixed"
-     * measurements made when the frame was captured
-     * 
+     * @brief We compute the error by transforming the world coordinates of the 
+     * landmark to camera coordinates of the parent frame of the framepoint.
+     * These estimated coordinates are then compared to the measured coordinates
+     * of the fp, ie the camera coordinates of the fp that corresponds to the 
+     * landmark.
      */
     
     Frame* frame_ptr = fp.parent_frame.get();
@@ -127,6 +117,8 @@ void Landmark::PoseOptimizer::OptimizeOnce(){
         Framepoint* fp = measurement_vector[i].get();
         ComputeError(*fp);
         Linearize(*fp);
+
+        iteration_error = iteration_error + error_squared;
     };
 
     Solve();
@@ -141,6 +133,58 @@ Eigen::Matrix3f Landmark::PoseOptimizer::FindJacobian(Framepoint& fp){
     return rot_matrix;
 };
 
+void Landmark::PoseOptimizer::Solve(){
+    /**
+     * @brief Solve the equation Dx = - b / H;
+     * 
+     */
+
+    Eigen::Vector3f dx;
+    dx.setZero();
+
+    Eigen::Matrix3f identity3;
+    identity3.setIdentity();
+
+    // Unity damping factor
+    H = H + identity3;
+    dx = H.ldlt().solve(-b);
+
+    // dx ends up being a vector of (dx ,dy and dx)
+
+    // Updating the world coordinates
+    estimated_world_coordinates = estimated_world_coordinates + dx;
+
+    return;
+};
+
+void Landmark::PoseOptimizer::Converge(){
+    /**
+     * @brief Combine all the methods together and run it in a loop till convergence
+     * 
+     */
+
+    total_error = 0;
+    float previous_error = 0;
+    float error_delta = 0;
+    int iteration_count = 0;
+    bool converged = false;
+
+    while(!converged){
+        OptimizeOnce();
+        total_error = total_error + iteration_error;
+
+        // Convergence criterion
+        error_delta = iteration_error - previous_error;
+        previous_error = iteration_error;
+        if(error_delta < 0.1 || (iteration_count > this->params.max_iterations)){
+            converged = true;
+        }
+        iteration_count++;
+    };
+
+    Update();
+    return;
+};
 
 void Landmark::UpdateLandmark(boost::shared_ptr<Framepoint> fp){
     /**
@@ -159,5 +203,6 @@ void Landmark::UpdateLandmark(boost::shared_ptr<Framepoint> fp){
     // Initialization
     optimizer.Initialize(world_coordinates);
 
+    return;
 
 };

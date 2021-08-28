@@ -25,11 +25,8 @@ class Landmark{
             float kernel_maximum_error;
             float minimum_depth;
             int max_iterations;
-            
             // Convergence threshold
             float convergence_threshold;
-            // Inter camera transform
-            Eigen::Transform<float,3,2> T_caml2camr;
 
         };
         static optimization_params params;
@@ -46,14 +43,12 @@ class Landmark{
         Eigen::Vector3f b;
         Eigen::Matrix3f omega;
         Eigen::Vector3f distance_error;
-        
-        float translation_factor;
 
         // Inliers
         int inliers;
 
         // Camera Coordinates
-        Eigen::Vector3f p_caml,p_camr;
+        Eigen::Vector3f p_caml;
         
         private:
         bool compute_success;
