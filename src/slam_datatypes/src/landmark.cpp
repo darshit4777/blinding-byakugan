@@ -16,3 +16,15 @@ Landmark::Landmark(boost::shared_ptr<Framepoint> fp){
     measurement_vector.push_back(origin);
     return;
 };
+
+void Landmark::UpdateLandmark(boost::shared_ptr<Framepoint> fp){
+    /**
+     * @brief Updating the position of the landmark by incorporating a new fp
+     * Running an optimization, to update the position of the landmark using 
+     * multiple measurements from all recorded framepoints associated with 
+     * tha landmark
+     */
+
+    // Initialization
+
+}
