@@ -16,6 +16,8 @@ Landmark::Landmark(boost::shared_ptr<Framepoint> fp){
     nu.z() = 1 / world_coordinates.z();
 
     optimizer.measurement_vector.push_back(origin);
+    optimizer.max_inliers_recorded = 0;
+    updates = 0;
     return;
 };
 
@@ -57,6 +59,12 @@ void Landmark::PoseOptimizer::ComputeError(Framepoint& fp){
 
     // Estimated camera coordinates in the left camera
     p_caml = frame_ptr->T_cam2world * estimated_world_coordinates;
+
+    // Checking if the point is an inlier or outlier
+    if(p_caml.z() < float(0.0)){
+        // For negative depth we consider the point as an outlier
+        outliers++;
+    };
 
     // Checking coordinates for invalid values
     if(HasInf(p_caml)){
@@ -110,7 +118,10 @@ void Landmark::PoseOptimizer::OptimizeOnce(){
     distance_error.setZero();
     error_squared = 0;
     iteration_error = 0;
+    
+    // Initializing the inliers and outliers
     inliers = 0;
+    outliers = 0;
 
     for(int i =0; i < measurement_vector.size(); i++){
 
@@ -181,8 +192,6 @@ void Landmark::PoseOptimizer::Converge(){
         }
         iteration_count++;
     };
-
-    Update();
     return;
 };
 
@@ -202,6 +211,35 @@ void Landmark::UpdateLandmark(boost::shared_ptr<Framepoint> fp){
 
     // Initialization
     optimizer.Initialize(world_coordinates);
+    optimizer.Converge();
+
+    // Checking if the estimate if of a good quality
+    optimizer.inliers = optimizer.measurement_vector.size() - optimizer.outliers;
+    assert(optimizer.inliers > 0);
+
+    if(optimizer.inliers > optimizer.max_inliers_recorded){
+        // Updating the world coordinates
+        world_coordinates = optimizer.estimated_world_coordinates;
+        optimizer.max_inliers_recorded = optimizer.inliers;
+    }
+    else if (optimizer.inliers < optimizer.outliers){
+        // The optimization has failed we can choose to retain the previous estimate
+        // This is very poor condition where the number of outliers is more than the
+        // number of inliers. We choose to take a simple average here
+
+        Eigen::Vector3f world_coordinates_accumulated;
+        world_coordinates_accumulated.setZero();
+        for(int i =0; i < optimizer.measurement_vector.size(); i++){
+            Framepoint* fp = optimizer.measurement_vector[i].get();
+            world_coordinates_accumulated = world_coordinates_accumulated + fp->world_coordinates;
+        }
+        world_coordinates_accumulated = world_coordinates_accumulated / optimizer.measurement_vector.size();
+        world_coordinates = world_coordinates_accumulated;
+    }
+    else{
+        // This is the third case, wherein the number of inliers is better than outliers,
+        // but not better than previous updates - in this case we simply dont update.
+    };
 
     return;
 

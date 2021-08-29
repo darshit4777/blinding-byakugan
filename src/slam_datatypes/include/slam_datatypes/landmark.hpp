@@ -16,6 +16,7 @@ class Landmark{
     boost::shared_ptr<Framepoint> origin;
     Eigen::Matrix3f omega;
     Eigen::Vector3f nu;
+    int updates;
     
 
     class PoseOptimizer{
@@ -46,6 +47,8 @@ class Landmark{
 
         // Inliers
         int inliers;
+        int outliers;
+        int max_inliers_recorded;
 
         // Camera Coordinates
         Eigen::Vector3f p_caml;
