@@ -153,6 +153,10 @@ add_library(world_map
 add_library(local_map
   src/local_map.cpp
 )
+add_library(landmark
+  src/landmark.cpp
+)
+
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries

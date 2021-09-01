@@ -13,6 +13,7 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <nav_msgs/Odometry.h>
 #include <sharp-eye/point_sim.hpp>
+#include <slam_datatypes/slam_datatypes.hpp>
 /**
  * This file will create an executable which will serve as a test node and 
  * later on will be repurposed to form the ROS layer
@@ -606,7 +607,7 @@ class TestLandmarkOptimization{
 
         CreateRandomMeasurements();
 
-        //TestMain();
+        TestMain();
     }
 
     void CreateRandomMeasurements(){
@@ -664,8 +665,9 @@ class TestLandmarkOptimization{
                 boost::shared_ptr<Framepoint> framepoint_ptr = boost::make_shared<Framepoint>();
                 framepoint_ptr->camera_coordinates = T_world2cam.inverse() * landmark_position;
 
-                // p_caml however is a highly accurate measurement - lets add some noise to it
+                // lets add some noise to it
                 framepoint_ptr->camera_coordinates = framepoint_ptr->camera_coordinates + 0.25 * Eigen::Vector3f::Random();
+                framepoint_ptr->world_coordinates = landmark_position;
 
                 // Add the measurement to the vector
                 framepoint_ptr->parent_frame = frame_ptr;
@@ -679,7 +681,19 @@ class TestLandmarkOptimization{
         return;
     };
 
-    void TestMain();
+    void TestMain(){
+        // Create the first landmark
+        Landmark landmark(framepoint_vector.front());
+
+        // Now we try landmark updates for every landmark
+        for(int i = 1; i < framepoint_vector.size(); i++){
+            landmark.UpdateLandmark(framepoint_vector[i]);
+            std::cout<<"The updated landmark position is "<<std::endl;
+            std::cout<<landmark.world_coordinates<<std::endl;
+            std::cout<<"The no of updates are "<<landmark.updates<<std::endl;
+        };
+        return;
+    }
 
 };
 
@@ -692,8 +706,9 @@ int main(int argc, char **argv){
     image_transport::Subscriber imageSub_r = it.subscribe("cam1/image_raw", 1, boost::bind(CameraCallback,_1,1));
     //TestIncrementalMotion test(nh);
     Eigen::Vector3f landmark_position;
-    landmark_position.setZero();
-
+    landmark_position << 1.0, 3.0, -5.0;
+    std::cout<<"Initial Landmark Position"<<std::endl;
+    std::cout<<landmark_position<<std::endl;
     TestLandmarkOptimization test(landmark_position,5);
     return 0;
 }

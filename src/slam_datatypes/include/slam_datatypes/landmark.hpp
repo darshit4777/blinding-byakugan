@@ -30,7 +30,7 @@ class Landmark{
             float convergence_threshold;
 
         };
-        static optimization_params params;
+        optimization_params params;
         std::vector<boost::shared_ptr<Framepoint>> measurement_vector;
         
         // Error

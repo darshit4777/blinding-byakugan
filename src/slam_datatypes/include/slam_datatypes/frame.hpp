@@ -8,6 +8,8 @@
 #include <slam_datatypes/framepoint.hpp>
 #include <slam_datatypes/camera.hpp>
 
+struct Framepoint;
+
 struct Frame{
     cv::Mat image_l, image_r; //< raw image data
     Eigen::Transform<float,3,2> T_cam2world, T_world2cam; // Eigen 3D affine transform to represent pose

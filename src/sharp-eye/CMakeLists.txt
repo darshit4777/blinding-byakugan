@@ -199,6 +199,7 @@ target_link_libraries(test_node
   point_sim
   world_map
   local_map
+  landmark
 )
 
 #############

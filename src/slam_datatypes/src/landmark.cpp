@@ -20,6 +20,9 @@ Landmark::Landmark(boost::shared_ptr<Framepoint> fp){
     updates = 0;
     return;
 };
+Landmark::PoseOptimizer::PoseOptimizer(){
+    return;
+}
 
 void Landmark::PoseOptimizer::Initialize(Eigen::Vector3f world_coordinates_){
     this->params.minimum_depth = 0.1;
@@ -32,7 +35,6 @@ void Landmark::PoseOptimizer::Initialize(Eigen::Vector3f world_coordinates_){
 
     H.setZero();
     omega.setIdentity();
-    b.resize(6);
     b.setZero();
     
     // Set the initial estimate of world coordinates as the original location 
@@ -221,6 +223,7 @@ void Landmark::UpdateLandmark(boost::shared_ptr<Framepoint> fp){
         // Updating the world coordinates
         world_coordinates = optimizer.estimated_world_coordinates;
         optimizer.max_inliers_recorded = optimizer.inliers;
+        updates++;
     }
     else if (optimizer.inliers < optimizer.outliers){
         // The optimization has failed we can choose to retain the previous estimate
@@ -243,4 +246,25 @@ void Landmark::UpdateLandmark(boost::shared_ptr<Framepoint> fp){
 
     return;
 
+};
+Landmark::~Landmark(){
+    return;
+};
+
+Landmark::PoseOptimizer::~PoseOptimizer(){
+    return;
+};
+bool Landmark::PoseOptimizer::HasInf(Eigen::Vector3f &vec){
+
+    /**
+     * @brief Checks the vector to see if any of the elements have an inf
+     * 
+     */
+
+    for(int i = 0; i<vec.size(); i++){
+        if(std::isinf(vec[i])){
+            return true;
+        };
+    };  
+    return false;
 };
