@@ -589,6 +589,100 @@ class TestPoseOptimizer{
     }
 };
 
+class TestLandmarkOptimization{
+    public:
+    Eigen::Vector3f landmark_position;
+    int n; //< No of measurements
+    Camera cam_l;
+    std::vector<boost::shared_ptr<Framepoint>> framepoint_vector;
+
+    TestLandmarkOptimization(Eigen::Vector3f position, int measurements){
+        landmark_position = position;
+        n = measurements;
+
+        cam_l.intrinsics << 458.654,     0.0,    367.215,
+                               0.0, 457.296,    248.375,
+                               0.0,     0.0,        1.0;
+
+        CreateRandomMeasurements();
+
+        //TestMain();
+    }
+
+    void CreateRandomMeasurements(){
+        for(int i = 0; i < n; i++){
+            // Create random vectors upto a range of 15.625m
+            Eigen::Vector3f random_vector;
+            random_vector.setRandom();
+            random_vector = random_vector * 2.5;
+
+            // Measurement translation
+            Eigen::Vector3f measurement_translation;
+            measurement_translation = landmark_position + random_vector;
+
+            // Measurement rotation
+            bool valid_measurement = false;
+            while(!valid_measurement){
+                // Create a random rotation
+                Eigen::Quaternionf random_quat;
+                random_quat = Eigen::Quaternionf::UnitRandom();
+
+                Eigen::Transform<float,3,2> T_world2cam;
+                T_world2cam.setIdentity();
+                T_world2cam.translation() = measurement_translation;
+                T_world2cam.rotate(random_quat.toRotationMatrix());  
+
+                // Test the projection
+                Eigen::Vector3f p_caml;
+                p_caml = cam_l.intrinsics * T_world2cam.inverse() * landmark_position;
+
+                if(p_caml.z() == 0 ){
+                    continue;
+                }
+
+
+                p_caml.x() = p_caml.x() / p_caml.z();
+                p_caml.y() = p_caml.y() / p_caml.z();
+
+                if((p_caml.x() > 720) || (p_caml.x() < 0)){
+                    continue;
+                }
+                if((p_caml.y() > 480) || (p_caml.y() < 0)){
+                    continue;
+                }
+                if(p_caml.hasNaN()){
+                    continue;
+                }
+
+                // If it passes all the tests - its a valid measurement
+
+                // Creating camera coordinates for the framepoint
+                boost::shared_ptr<Frame> frame_ptr = boost::make_shared<Frame>();
+                frame_ptr->T_world2cam = T_world2cam;
+                frame_ptr->T_cam2world = T_world2cam.inverse();
+
+                boost::shared_ptr<Framepoint> framepoint_ptr = boost::make_shared<Framepoint>();
+                framepoint_ptr->camera_coordinates = T_world2cam.inverse() * landmark_position;
+
+                // p_caml however is a highly accurate measurement - lets add some noise to it
+                framepoint_ptr->camera_coordinates = framepoint_ptr->camera_coordinates + 0.25 * Eigen::Vector3f::Random();
+
+                // Add the measurement to the vector
+                framepoint_ptr->parent_frame = frame_ptr;
+                framepoint_vector.push_back(framepoint_ptr);
+
+                std::cout<<"Valid measurement created"<<std::endl;
+                std::cout<<"The pixels for the point are "<<p_caml.x()<<" "<<p_caml.y()<<std::endl;
+                valid_measurement = true; 
+            };
+        }
+        return;
+    };
+
+    void TestMain();
+
+};
+
 
 int main(int argc, char **argv){
     ros::init(argc,argv,"image_listener");
@@ -596,6 +690,10 @@ int main(int argc, char **argv){
     image_transport::ImageTransport it(nh);
     image_transport::Subscriber imageSub_l = it.subscribe("cam0/image_raw", 1, boost::bind(CameraCallback,_1,0));
     image_transport::Subscriber imageSub_r = it.subscribe("cam1/image_raw", 1, boost::bind(CameraCallback,_1,1));
-    TestIncrementalMotion test(nh);
+    //TestIncrementalMotion test(nh);
+    Eigen::Vector3f landmark_position;
+    landmark_position.setZero();
+
+    TestLandmarkOptimization test(landmark_position,5);
     return 0;
 }

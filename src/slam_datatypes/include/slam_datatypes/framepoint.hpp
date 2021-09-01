@@ -7,9 +7,11 @@
 #include <boost/shared_ptr.hpp>
 #include <slam_datatypes/keypoint.hpp>
 #include <slam_datatypes/landmark.hpp>
+#include <slam_datatypes/frame.hpp>
 
 // Forward Declaration
 struct Landmark;
+class Frame;
 
 struct Framepoint{
     // A framepoint holds the information of a keypoint and its track
