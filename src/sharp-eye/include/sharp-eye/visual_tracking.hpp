@@ -142,6 +142,8 @@ class VisualTracking{
     void SetFramepointVector(FramepointVector& framepoints);
     
     bool HasInf(Eigen::Vector3f vec);
+
+    void CreateAndUpdateLandmarks(Frame* current_frame_ptr,LocalMap* lmap_ptr);
     private:
     void InitializeStateJacobian();
 

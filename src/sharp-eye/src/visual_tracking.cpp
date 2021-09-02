@@ -251,6 +251,64 @@ Eigen::Transform<float,3,2> VisualTracking::EstimateIncrementalMotion(Frame &fra
     return frame_ptr.T_world2cam;
 };
 
+void VisualTracking::CreateAndUpdateLandmarks(Frame* current_frame_ptr,LocalMap* lmap_ptr){
+    //Update the landmarks
+
+    // Loop through all the points of the current frame
+    for(int i =0; i<current_frame_ptr->points.size();i++){
+        Framepoint* fp = current_frame_ptr->points[i].get();
+
+        // Now the pose is refined - let us check if we can convert it to a landmark
+        if(fp->inlier){
+            // Check the track length
+            // TODO parameterize this 
+            int threshold_track_length = 3;
+            int count = 0;
+            bool track_broken = false;
+
+            // Creating a shifting pointer
+            Framepoint* framepoint_ptr;
+            framepoint_ptr = fp;
+            
+            while(!track_broken){
+                
+                if(framepoint_ptr->previous != nullptr){
+                    // Check if the previous has a landmark associated with it
+                    if(framepoint_ptr->associated_landmark != nullptr){
+                        // Previous has a landmark associated with it - update it.
+                        framepoint_ptr->associated_landmark->UpdateLandmark(current_frame_ptr->points[i]);
+                        // Need to be sure here that we aren't adding the same landmark again and again
+                        auto test_ptr = std::find(actively_tracked_landmarks.begin(),actively_tracked_landmarks.end(),framepoint_ptr->associated_landmark);
+                        if(test_ptr == actively_tracked_landmarks.end()){
+                            // Landmark hasnt been added - Add it now
+                            actively_tracked_landmarks.push_back(framepoint_ptr->associated_landmark);
+                        };
+                        count = 0;
+                        break;
+                        
+                    }
+                    else{
+                        count++;
+                        framepoint_ptr = framepoint_ptr->previous;
+                        track_broken = false;
+                    };
+                    
+                }
+                else{
+                    track_broken = true;
+                };
+            };
+            if(count > threshold_track_length){
+                // Create a new landmark
+                boost::shared_ptr<Landmark> landmark_ptr = boost::make_shared<Landmark>(current_frame_ptr->points[i]);
+                lmap_ptr->AddLandmark(landmark_ptr);
+                actively_tracked_landmarks.push_back(landmark_ptr);
+            };
+        };
+    };
+
+}
+
 VisualTracking::ManifoldDerivative VisualTracking::CalculateMotionJacobian(Frame* current_frame_ptr,Frame* previous_frame_ptr){
     /**
      * @brief Time differentials on SE3 are calculated as deltaT = T1.inverse() * T2
@@ -492,6 +550,9 @@ void VisualTracking::InitializeNode(){
         };  
     };  
 };
+
+
+
 
 bool VisualTracking::HasInf(Eigen::Vector3f vec){
     /**
