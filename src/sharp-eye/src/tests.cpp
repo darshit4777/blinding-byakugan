@@ -703,6 +703,41 @@ class TestLandmarkOptimization{
 
 };
 
+class TestSharedPointers{
+    public:
+    Framepoint fp;
+
+    boost::shared_ptr<Framepoint> fp_ptr;
+    boost::shared_ptr<Landmark> lmark_ptr;
+
+    TestSharedPointers(){
+        
+        std::cout<<"Testing Framepoint"<<std::endl;
+        Eigen::Vector3f camera_coordinates;
+        camera_coordinates.setRandom();
+        std::cout<<"Initial Camera coordiantes"<<std::endl;
+        std::cout<<camera_coordinates<<std::endl;
+
+        fp.camera_coordinates = camera_coordinates;
+        fp_ptr = boost::make_shared<Framepoint>(fp);
+        std::cout<<"Shared pointer Camera coordinates"<<std::endl;
+        std::cout<<fp_ptr.get()->camera_coordinates<<std::endl;
+
+
+        std::cout<<"Testing Landmark"<<std::endl;
+        Eigen::Vector3f world_coordinates;
+        world_coordinates.setRandom();
+        std::cout<<"Initial World Coordiantes"<<std::endl;
+        std::cout<<world_coordinates<<std::endl;
+        fp_ptr.get()->world_coordinates = world_coordinates;
+        lmark_ptr = boost::make_shared<Landmark>(fp_ptr);
+        std::cout<<"Shared pointer World coordinates"<<std::endl;
+        std::cout<<lmark_ptr.get()->world_coordinates<<std::endl;
+        
+        return;
+    };
+};
+
 
 int main(int argc, char **argv){
     ros::init(argc,argv,"image_listener");
@@ -711,10 +746,11 @@ int main(int argc, char **argv){
     image_transport::Subscriber imageSub_l = it.subscribe("cam0/image_raw", 1, boost::bind(CameraCallback,_1,0));
     image_transport::Subscriber imageSub_r = it.subscribe("cam1/image_raw", 1, boost::bind(CameraCallback,_1,1));
     //TestIncrementalMotion test(nh);
-    Eigen::Vector3f landmark_position;
-    landmark_position << 1.0, 3.0, -5.0;
-    std::cout<<"Initial Landmark Position"<<std::endl;
-    std::cout<<landmark_position<<std::endl;
-    TestLandmarkOptimization test(landmark_position,15);
+    //Eigen::Vector3f landmark_position;
+    //landmark_position << 1.0, 3.0, -5.0;
+    //std::cout<<"Initial Landmark Position"<<std::endl;
+    //std::cout<<landmark_position<<std::endl;
+    //TestLandmarkOptimization test(landmark_position,15);
+    TestSharedPointers test;
     return 0;
 }
