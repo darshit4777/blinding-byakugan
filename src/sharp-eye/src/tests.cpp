@@ -666,7 +666,7 @@ class TestLandmarkOptimization{
                 framepoint_ptr->camera_coordinates = T_world2cam.inverse() * landmark_position;
 
                 // lets add some noise to it
-                framepoint_ptr->camera_coordinates = framepoint_ptr->camera_coordinates + 0.25 * Eigen::Vector3f::Random();
+                framepoint_ptr->camera_coordinates = framepoint_ptr->camera_coordinates + 0.15 * Eigen::Vector3f::Random();
                 framepoint_ptr->world_coordinates = landmark_position;
 
                 // Add the measurement to the vector
@@ -709,6 +709,6 @@ int main(int argc, char **argv){
     landmark_position << 1.0, 3.0, -5.0;
     std::cout<<"Initial Landmark Position"<<std::endl;
     std::cout<<landmark_position<<std::endl;
-    TestLandmarkOptimization test(landmark_position,5);
+    TestLandmarkOptimization test(landmark_position,15);
     return 0;
 }

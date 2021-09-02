@@ -2,7 +2,7 @@
 typedef boost::shared_ptr<LocalMap> LocalMapSharedPtr;  
 typedef boost::shared_ptr<Landmark> LandmarkSharedPtr;
 typedef boost::shared_ptr<Frame> FrameSharedPtr;
-
+typedef std::vector<boost::shared_ptr<Framepoint>> FramepointPointerVector;
 
 LocalMap::LocalMap(){
     T_map2world.setIdentity();
@@ -13,7 +13,7 @@ LocalMap::LocalMap(){
     return;
 };
 
-void LocalMap::CreateNewFrame(cv::Mat image_left,cv::Mat image_right,FramepointVector fp_vector,Eigen::Transform<float,3,2> T_world2cam){
+void LocalMap::CreateNewFrame(cv::Mat image_left,cv::Mat image_right,FramepointPointerVector fp_vector,Eigen::Transform<float,3,2> T_world2cam){
     FrameSharedPtr frame_ptr = boost::make_shared<Frame>();
     frame_ptr->T_world2cam = T_world2cam;
     frame_ptr->T_cam2world = T_world2cam.inverse();

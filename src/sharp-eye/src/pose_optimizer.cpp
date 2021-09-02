@@ -383,21 +383,50 @@ void PoseOptimizer::Update(){
      * 
      */
     
+
+    // T_prev2curr is actually T_curr2prev
     // Update the pose
-    //std::cout<<"Debug : T_prev2curr Final"<<std::endl;
-    //std::cout<<T_prev2curr.matrix()<<std::endl;
     current_frame_ptr->T_cam2world =  T_prev2curr * previous_frame_ptr->T_cam2world;
     current_frame_ptr->T_world2cam = current_frame_ptr->T_cam2world.inverse();
 
-    // Update the landmarks
+    //Update the landmarks
     //for(Framepoint& fp : current_frame_ptr->points){
     //    fp.world_coordinates = current_frame_ptr->T_world2cam * fp.camera_coordinates;
-    //    // Now the pose is refined - let us make them into landmarks
-    //    if(fp.inlier && !fp.landmark_set){
+    //    // Now the pose is refined - let us check if we can convert it to a landmark
+    //    if(fp.inlier){
+//
+    //        // Check the track length
+    //        int threshold_track_length = 3;
+    //        int count = 0;
+    //        bool track_broken = false;
+    //        Framepoint* framepoint_ptr;
+    //        framepoint_ptr = &fp;
     //        
-    //        // Creating a new landmark
-    //        Landmark landmark;
-    //        // Storing the landmark in the current local map
+    //        while(!track_broken){
+    //            
+    //            if(framepoint_ptr->previous != nullptr){
+    //                // Check if the previous has a landmark associated with it
+    //                if(framepoint_ptr->associated_landmark != nullptr){
+    //                    // Previous has a landmark associated with it - update it.
+    //                    //framepoint_ptr->associated_landmark->UpdateLandmark(fp);
+    //                }
+    //                count++;
+    //                framepoint_ptr = framepoint_ptr->previous;
+    //                track_broken = false;
+    //            }
+    //            else{
+    //                track_broken = true;
+    //            }
+    //        };
+//
+    //        if(count > threshold_track_length){
+    //            // Time to create landmark
+    //        }
+    //        
+    //        
+//
+            
+            // Storing the landmark in the current local map
     //        lmap_ptr->associated_landmarks.push_back(landmark);
     //        
     //        // Now working with a landmark pointer once the stack pointer is assigned

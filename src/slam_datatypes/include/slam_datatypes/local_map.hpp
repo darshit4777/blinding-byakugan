@@ -12,7 +12,7 @@
 class LocalMap{
     typedef boost::shared_ptr<Frame> FrameSharedPtr;
     typedef boost::shared_ptr<Landmark> LandmarkSharedPtr;
-    typedef std::vector<Framepoint> FramepointVector;
+    typedef std::vector<boost::shared_ptr<Framepoint>> FramepointPointerVector;
     public:
     Eigen::Transform<float,3,2> T_map2world, T_world2map;
     std::vector<FrameSharedPtr> frames; // enclosed frames
@@ -28,7 +28,7 @@ class LocalMap{
      * 
      * @param T_world2cam 
      */
-    void CreateNewFrame(cv::Mat image_left,cv::Mat image_right,FramepointVector fp_vector,Eigen::Transform<float,3,2> T_world2cam = Eigen::Transform<float,3,2>::Identity());
+    void CreateNewFrame(cv::Mat image_left,cv::Mat image_right,FramepointPointerVector fp_vector,Eigen::Transform<float,3,2> T_world2cam = Eigen::Transform<float,3,2>::Identity());
     /**
      * @brief Add the landmark to the std vector of landmarks
      * 

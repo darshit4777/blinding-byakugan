@@ -3,8 +3,7 @@
 #include<opencv2/calib3d/calib3d.hpp>
 
 typedef std::vector<KeypointWD> FeatureVector;
-typedef std::vector<Framepoint> FramepointVector;
-typedef std::vector<Frame> FrameVector;
+typedef std::vector<boost::shared_ptr<Framepoint>> FramepointPointerVector;
 typedef std::vector<std::pair<KeypointWD,KeypointWD>> MatchVector;
 typedef Camera Camera;
 typedef std::chrono::high_resolution_clock _Clock; 
@@ -29,7 +28,7 @@ VisualTracking::VisualTracking(Camera &cam_left,Camera &cam_right){
     std::cout<<"Visual Tracking Initialized"<<std::endl;  
 };
 
-int VisualTracking::FindCorrespondences(FramepointVector &previous_frame,FramepointVector &current_frame){
+int VisualTracking::FindCorrespondences(FramepointPointerVector &previous_frame,FramepointPointerVector &current_frame){
 
     /**
      * @brief Finds the correspondences / matches between the framepoint vector of
@@ -59,19 +58,22 @@ int VisualTracking::FindCorrespondences(FramepointVector &previous_frame,Framepo
     });
     // We use the previous frame as the query frame
 
-    for(Framepoint &query_framepoint : previous_frame){
+    for(int i =0; i<previous_frame.size(); i++){
+        Framepoint* query_framepoint = previous_frame[i].get();
+
         // Break Condition
         int id_current = 0;
         std::vector<int> match_shortlist; // Framepoints found in the rectangular search region
         int ymin,ymax,xmin,xmax;
-        ymin = std::max(int(query_framepoint.keypoint_l.keypoint.pt.y - 50),0);
-        ymax = std::min(int(query_framepoint.keypoint_l.keypoint.pt.y + 50),img_height);
+        ymin = std::max(int(query_framepoint->keypoint_l.keypoint.pt.y - 50),0);
+        ymax = std::min(int(query_framepoint->keypoint_l.keypoint.pt.y + 50),img_height);
 
-        xmin = std::max(int(query_framepoint.keypoint_l.keypoint.pt.x - 50),0);
-        xmax = std::min(int(query_framepoint.keypoint_l.keypoint.pt.x + 50),img_width);
+        xmin = std::max(int(query_framepoint->keypoint_l.keypoint.pt.x - 50),0);
+        xmax = std::min(int(query_framepoint->keypoint_l.keypoint.pt.x + 50),img_width);
         
         // Loop to search for the top of the rectangular region
-        while(current_frame[id_current].keypoint_l.keypoint.pt.y < ymin){
+        // TODO We need to fix this line = its too shabby
+        while(current_frame[id_current].get()->keypoint_l.keypoint.pt.y < ymin){
             id_current++;
         };
 
@@ -79,11 +81,11 @@ int VisualTracking::FindCorrespondences(FramepointVector &previous_frame,Framepo
         // We check each keypoint and see if it obeys the column constraints
         // when the lower row of the rectangular region is breached, we move 
         // to the next point
-        while(current_frame[id_current].keypoint_l.keypoint.pt.y < ymax){
+        while(current_frame[id_current].get()->keypoint_l.keypoint.pt.y < ymax){
             if(id_current >= current_frame.size()){
                 break;
             }
-            int x = current_frame[id_current].keypoint_l.keypoint.pt.x;
+            int x = current_frame[id_current].get()->keypoint_l.keypoint.pt.x;
             
             // Check if the keypoint is within the rectangle
             if((x < xmax) && (x>xmin)){
@@ -108,10 +110,10 @@ int VisualTracking::FindCorrespondences(FramepointVector &previous_frame,Framepo
 
         // Assigning the current and query descriptors
         for(int i =0; i < match_shortlist.size(); i++){
-            current_descriptor.push_back(current_frame[match_shortlist[i]].keypoint_l.descriptor);
+            current_descriptor.push_back(current_frame[match_shortlist[i]].get()->keypoint_l.descriptor);
         };
 
-        query_descriptor = query_framepoint.keypoint_l.descriptor;
+        query_descriptor = query_framepoint->keypoint_l.descriptor;
 
         matcher.knnMatch(query_descriptor,current_descriptor,knn_matches,2);
         if(knn_matches[0].empty()){
@@ -140,8 +142,9 @@ int VisualTracking::FindCorrespondences(FramepointVector &previous_frame,Framepo
         
         // Assigning to each others previous and next
         int current_frame_idx = match_shortlist[good_matches[0].trainIdx];
-        query_framepoint.next = &current_frame[current_frame_idx];
-        current_frame[current_frame_idx].previous = &query_framepoint;
+        Framepoint* current_frame_ptr = current_frame[current_frame_idx].get();
+        query_framepoint->next = current_frame_ptr;
+        current_frame_ptr->previous = query_framepoint;
         //query_framepoint.next = boost::make_shared<Framepoint>( current_frame[current_frame_idx]);
         //current_frame[current_frame_idx].previous = boost::make_shared<Framepoint>(query_framepoint);
         correspondences++;
@@ -313,7 +316,13 @@ void VisualTracking::SetPredictionCallTime(){
 
 void VisualTracking::SetFramepointVector(FramepointVector& framepoints){
     // Sets the framepoint vector
-    this->framepoint_vec = framepoints;
+    // Reassigning all framepoints to heap memory and adding them to the framepoint vector
+
+    for(int i = 0; i < framepoints.size(); i++){
+     boost::shared_ptr<Framepoint> fp_ptr = boost::make_shared<Framepoint>(framepoints[i]);
+     framepoint_vec.push_back(fp_ptr);
+
+    }
     return;
 };
 
@@ -346,13 +355,13 @@ void VisualTracking::InitializeNode(){
         Frame* frame_ptr = lmap_ptr->GetLastFrame();
         
         // Framepoint initialization 
-        for(Framepoint& framepoint : frame_ptr->points){
-            framepoint.world_coordinates = framepoint.camera_coordinates;
-            framepoint.landmark_set = false;
-            framepoint.inlier = false;
-            framepoint.next = NULL;
-            framepoint.associated_landmark = NULL;
-
+        for(int i =0; i < frame_ptr->points.size(); i++){
+            Framepoint* framepoint_ptr = frame_ptr->points[i].get();
+            framepoint_ptr->world_coordinates = framepoint_ptr->camera_coordinates;
+            framepoint_ptr->landmark_set = false;
+            framepoint_ptr->inlier = false;
+            framepoint_ptr->next = NULL;
+            framepoint_ptr->associated_landmark = NULL;
         };
 
         // TODO : what if the framepoint vector is empty ? 
@@ -424,12 +433,13 @@ void VisualTracking::InitializeNode(){
                 lmap_ptr->T_map2world = prev_frame_ptr->T_cam2world;
             };
             // Setting the frame world coordinates
-            for(Framepoint& framepoint : frame_ptr->points){
-                framepoint.world_coordinates = frame_ptr->T_world2cam * framepoint.camera_coordinates;
-                framepoint.landmark_set = false;
-                framepoint.inlier = false;
-                framepoint.next = NULL;
-                framepoint.associated_landmark = NULL;
+            for(int i=0; i < frame_ptr->points.size(); i++){
+                Framepoint* framepoint_ptr = frame_ptr->points[i].get();
+                framepoint_ptr->world_coordinates = frame_ptr->T_world2cam * framepoint_ptr->camera_coordinates;
+                framepoint_ptr->landmark_set = false;
+                framepoint_ptr->inlier = false;
+                framepoint_ptr->next = NULL;
+                framepoint_ptr->associated_landmark = NULL;
             };
             return;
         }
@@ -441,12 +451,13 @@ void VisualTracking::InitializeNode(){
                 frame_ptr->T_world2cam = prev_frame_ptr->T_world2cam;
                 frame_ptr->T_cam2world = frame_ptr->T_world2cam.inverse();
                 
-                for(Framepoint& framepoint : frame_ptr->points){
-                    framepoint.world_coordinates = frame_ptr->T_world2cam*framepoint.camera_coordinates;
-                    framepoint.landmark_set = false;
-                    framepoint.inlier = false;
-                    framepoint.next = NULL;
-                    framepoint.associated_landmark = NULL;
+                for(int i =0; i < frame_ptr->points.size(); i++){
+                    Framepoint* framepoint_ptr;
+                    framepoint_ptr->world_coordinates = frame_ptr->T_world2cam*framepoint_ptr->camera_coordinates;
+                    framepoint_ptr->landmark_set = false;
+                    framepoint_ptr->inlier = false;
+                    framepoint_ptr->next = NULL;
+                    framepoint_ptr->associated_landmark = NULL;
                 };
                 std::cout<<"Pose Prediction applied"<<std::endl;
             }
@@ -456,13 +467,13 @@ void VisualTracking::InitializeNode(){
                 // Get previous known frame
                 frame_ptr->T_world2cam = prev_frame_ptr->T_world2cam;
                 frame_ptr->T_cam2world = prev_frame_ptr->T_cam2world;
-
-                for(Framepoint& framepoint : frame_ptr->points){
-                    framepoint.world_coordinates = frame_ptr->T_world2cam * framepoint.camera_coordinates;
-                    framepoint.landmark_set = false;
-                    framepoint.inlier = false;
-                    framepoint.next = NULL;
-                    framepoint.associated_landmark = NULL;
+                for(int i =0; i < frame_ptr->points.size(); i++){
+                    Framepoint* framepoint_ptr;
+                    framepoint_ptr->world_coordinates = frame_ptr->T_world2cam * framepoint_ptr->camera_coordinates;
+                    framepoint_ptr->landmark_set = false;
+                    framepoint_ptr->inlier = false;
+                    framepoint_ptr->next = NULL;
+                    framepoint_ptr->associated_landmark = NULL;
                 };
                 std::cout<<"Pose Prediction Not applied"<<std::endl;
             };

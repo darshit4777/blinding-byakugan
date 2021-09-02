@@ -229,7 +229,7 @@ void Landmark::UpdateLandmark(boost::shared_ptr<Framepoint> fp){
         // The optimization has failed we can choose to retain the previous estimate
         // This is very poor condition where the number of outliers is more than the
         // number of inliers. We choose to take a simple average here
-
+        std::cout<<"Not enough inliers - Averaging"<<std::endl;
         Eigen::Vector3f world_coordinates_accumulated;
         world_coordinates_accumulated.setZero();
         for(int i =0; i < optimizer.measurement_vector.size(); i++){

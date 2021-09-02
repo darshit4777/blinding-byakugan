@@ -4,12 +4,13 @@
 #include <chrono>
 typedef std::vector<KeypointWD> FeatureVector;
 typedef std::vector<Framepoint> FramepointVector;
-typedef std::vector<Frame> FrameVector;
+typedef std::vector<Framepoint> FramepointVector;
+typedef std::vector<boost::shared_ptr<Framepoint>> FramepointPointerVector;
 typedef std::vector<std::pair<KeypointWD,KeypointWD>> MatchVector;
 typedef Camera Camera;
 typedef std::chrono::high_resolution_clock _Clock; 
 typedef std::chrono::_V2::high_resolution_clock::time_point _Time;
-
+typedef std::vector<boost::shared_ptr<Landmark>> LandmarkPointerVector;
 
 
 class VisualTracking{
@@ -39,7 +40,8 @@ class VisualTracking{
     cv::FlannBasedMatcher matcher;
 
     // Framepoint Vector
-    FramepointVector framepoint_vec;
+    FramepointPointerVector framepoint_vec;
+    FramepointPointerVector lost_points;
 
     // Left and Right Camera transform
     Eigen::Transform<float,3,2> T_caml2camr;
@@ -50,6 +52,8 @@ class VisualTracking{
     // Pose optimizer
     PoseOptimizer* optimizer;
 
+    // Landmarks
+    LandmarkPointerVector actively_tracked_landmarks;
     struct ManifoldDerivative{
         Eigen::Transform<float,3,2> deltaT;
         _Time prediction_call;
@@ -76,7 +80,7 @@ class VisualTracking{
      * @param current_frame 
      * @return int << returns the number of correspondences 
      */
-    int FindCorrespondences(FramepointVector &previous_frame,FramepointVector &current_frame);
+    int FindCorrespondences(FramepointPointerVector &previous_frame,FramepointPointerVector &current_frame);
 
     /**
      * @brief Calculates and returns the Jacobian matrix of the projection equation. 
