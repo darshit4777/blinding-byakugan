@@ -391,43 +391,49 @@ void PoseOptimizer::Update(){
     current_frame_ptr->T_world2cam = current_frame_ptr->T_cam2world.inverse();
 
     //Update the landmarks
-    //for(Framepoint& fp : current_frame_ptr->points){
-    //    fp.world_coordinates = current_frame_ptr->T_world2cam * fp.camera_coordinates;
-    //    // Now the pose is refined - let us check if we can convert it to a landmark
-    //    if(fp.inlier){
-//
-    //        // Check the track length
-    //        int threshold_track_length = 3;
-    //        int count = 0;
-    //        bool track_broken = false;
-    //        Framepoint* framepoint_ptr;
-    //        framepoint_ptr = &fp;
-    //        
-    //        while(!track_broken){
-    //            
-    //            if(framepoint_ptr->previous != nullptr){
-    //                // Check if the previous has a landmark associated with it
-    //                if(framepoint_ptr->associated_landmark != nullptr){
-    //                    // Previous has a landmark associated with it - update it.
-    //                    //framepoint_ptr->associated_landmark->UpdateLandmark(fp);
-    //                }
-    //                count++;
-    //                framepoint_ptr = framepoint_ptr->previous;
-    //                track_broken = false;
-    //            }
-    //            else{
-    //                track_broken = true;
-    //            }
-    //        };
-//
-    //        if(count > threshold_track_length){
-    //            // Time to create landmark
-    //        }
-    //        
-    //        
-//
+    for(int i =0; i<current_frame_ptr->points.size();i++){
+        Framepoint* fp = current_frame_ptr->points[i].get();
+        
+        fp->world_coordinates = current_frame_ptr->T_world2cam * fp->camera_coordinates;
+        // Now the pose is refined - let us check if we can convert it to a landmark
+        if(fp->inlier){
+//         // Check the track length
+            int threshold_track_length = 3;
+            int count = 0;
+            bool track_broken = false;
+            Framepoint* framepoint_ptr;
+            framepoint_ptr = fp;
             
-            // Storing the landmark in the current local map
+            while(!track_broken){
+                
+                if(framepoint_ptr->previous != nullptr){
+                    // Check if the previous has a landmark associated with it
+                    if(framepoint_ptr->associated_landmark != nullptr){
+                        // Previous has a landmark associated with it - update it.
+                        framepoint_ptr->associated_landmark->UpdateLandmark(current_frame_ptr->points[i]);
+                        count = 0;
+                        break;
+                        // TODO : Figure out a way to add it to the actively tracked landmark list
+                    }
+                    else{
+                        count++;
+                        framepoint_ptr = framepoint_ptr->previous;
+                        track_broken = false;
+                    }
+                    
+                }
+                else{
+                    track_broken = true;
+                }
+            };
+            if(count > threshold_track_length){
+                // Create a new landmark
+                boost::shared_ptr<Landmark> landmark_ptr = boost::make_shared<Landmark>(current_frame_ptr->points[i]);
+                lmap_ptr->AddLandmark(landmark_ptr);
+            };
+        };
+    };        
+    // Storing the landmark in the current local map
     //        lmap_ptr->associated_landmarks.push_back(landmark);
     //        
     //        // Now working with a landmark pointer once the stack pointer is assigned
@@ -482,7 +488,6 @@ void PoseOptimizer::Converge(){
             Update();
             return;
         }
-
     };
     Update();
     return;

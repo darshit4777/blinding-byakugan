@@ -283,7 +283,13 @@ class TestFindCorrespondences{
                 FramepointVector framepoints;
                 triangulator.Generate3DCoordinates(matches,framepoints,0.11,457.95,cam_left.intrinsics);
                 Frame current_frame;
-                current_frame.points = framepoints;
+                std::vector<boost::shared_ptr<Framepoint>> framepoint_ptr_vector;
+                for(int i =0; i < framepoints.size(); i++){
+                    boost::shared_ptr<Framepoint> framepoint_ptr; 
+                    framepoint_ptr = boost::make_shared<Framepoint>(framepoints[i]);
+                    framepoint_ptr_vector.push_back(framepoint_ptr);
+                }
+                current_frame.points = framepoint_ptr_vector;
                 frames.push_back(current_frame);
                 current_frame.points.clear();
                 if(frames.size() > 1){

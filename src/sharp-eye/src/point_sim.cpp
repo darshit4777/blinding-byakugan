@@ -114,8 +114,11 @@ void PointSim::CreateFrames(){
 
             fp1->next = fp2;
             fp2->previous = fp1;
-            previous_frame.points.push_back(*fp1);
-            current_frame.points.push_back(*fp2);
+            boost::shared_ptr<Framepoint> fp1_ptr, fp2_ptr;
+            fp1_ptr = boost::make_shared<Framepoint>(*fp1);
+            fp2_ptr = boost::make_shared<Framepoint>(*fp2);
+            previous_frame.points.push_back(fp1_ptr);
+            current_frame.points.push_back(fp2_ptr);
 
             //// Now we assign the previous and next pointers - Simple right?
             //current_frame.points.back().previous = &previous_frame.points.back();

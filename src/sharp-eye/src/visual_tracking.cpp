@@ -5,6 +5,7 @@
 typedef std::vector<KeypointWD> FeatureVector;
 typedef std::vector<boost::shared_ptr<Framepoint>> FramepointPointerVector;
 typedef std::vector<std::pair<KeypointWD,KeypointWD>> MatchVector;
+typedef boost::shared_ptr<Framepoint> FramepointShared;
 typedef Camera Camera;
 typedef std::chrono::high_resolution_clock _Clock; 
 typedef std::chrono::_V2::high_resolution_clock::time_point _Time;
@@ -46,15 +47,15 @@ int VisualTracking::FindCorrespondences(FramepointPointerVector &previous_frame,
     int correspondences = 0;
     
     // Sort Previous
-    std::sort(previous_frame.begin(),previous_frame.end(),[](const Framepoint& a,const Framepoint& b){
-        return ((a.keypoint_l.keypoint.pt.y < b.keypoint_l.keypoint.pt.y)||
-        (a.keypoint_l.keypoint.pt.y == b.keypoint_l.keypoint.pt.y && a.keypoint_l.keypoint.pt.x < b.keypoint_l.keypoint.pt.x));
+    std::sort(previous_frame.begin(),previous_frame.end(),[](const FramepointShared& a,const FramepointShared& b){
+        return ((a.get()->keypoint_l.keypoint.pt.y < b.get()->keypoint_l.keypoint.pt.y)||
+        (a.get()->keypoint_l.keypoint.pt.y == b.get()->keypoint_l.keypoint.pt.y && a.get()->keypoint_l.keypoint.pt.x < b.get()->keypoint_l.keypoint.pt.x));
     });
 
     // Sort Current
-    std::sort(current_frame.begin(),current_frame.end(),[](const Framepoint& a,const Framepoint& b){
-        return ((a.keypoint_l.keypoint.pt.y < b.keypoint_l.keypoint.pt.y)||
-        (a.keypoint_l.keypoint.pt.y == b.keypoint_l.keypoint.pt.y && a.keypoint_l.keypoint.pt.x < b.keypoint_l.keypoint.pt.x));
+    std::sort(current_frame.begin(),current_frame.end(),[](const FramepointShared& a,const FramepointShared& b){
+        return ((a.get()->keypoint_l.keypoint.pt.y < b.get()->keypoint_l.keypoint.pt.y)||
+        (a.get()->keypoint_l.keypoint.pt.y == b.get()->keypoint_l.keypoint.pt.y && a.get()->keypoint_l.keypoint.pt.x < b.get()->keypoint_l.keypoint.pt.x));
     });
     // We use the previous frame as the query frame
 
@@ -237,6 +238,8 @@ Eigen::Transform<float,3,2> VisualTracking::EstimateIncrementalMotion(Frame &fra
     optimizer->Initialize(&frame_ptr,previous_frame_ptr,lmap_ptr);
     optimizer->OptimizeOnce();
     optimizer->Converge();
+
+
     
     return frame_ptr.T_world2cam;
 };
