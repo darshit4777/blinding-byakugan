@@ -129,13 +129,13 @@ class PoseOptimizer{
      * checks for invalid points and then computes the reprojection error
      * 
      */
-    void ComputeError(Framepoint fp);
+    void ComputeError(Framepoint* fp);
     
     /**
      * @brief Assembles the H, b and omega matrices
      * 
      */
-    void Linearize(Framepoint fp);
+    void Linearize(Framepoint* fp);
 
     /**
      * @brief Solves for Dx and transforms it into the SE3 form

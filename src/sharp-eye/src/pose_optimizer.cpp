@@ -64,7 +64,8 @@ void PoseOptimizer::Initialize(Frame* curr_frame_ptr,Frame* prev_frame_ptr,Local
     std::cout<<current_frame_ptr->T_world2cam.matrix()<<std::endl;
     measurements = 0;
     for(int i =0; i< current_frame_ptr->points.size(); i++){
-        if(current_frame_ptr->points[i].previous == NULL){
+        // TODO : Fix this statement - too shabby
+        if(current_frame_ptr->points[i].get()->previous == NULL){
             continue;
         }
         else{
@@ -82,7 +83,7 @@ void PoseOptimizer::Initialize(Frame* curr_frame_ptr,Frame* prev_frame_ptr,Local
     return;
 };
 
-void PoseOptimizer::ComputeError(Framepoint fp){
+void PoseOptimizer::ComputeError(Framepoint* fp){
     /**
      * @brief Transforms the camera coordinates of points from the previous frame
      * to the current frame with an estimate of T_prev2curr. 
@@ -90,7 +91,7 @@ void PoseOptimizer::ComputeError(Framepoint fp){
      * 
     */
     
-    if(fp.previous == NULL){
+    if(fp->previous == nullptr){
         compute_success = false;
         return;
     }
@@ -100,8 +101,8 @@ void PoseOptimizer::ComputeError(Framepoint fp){
     //fp_2.push_back(*fp->previous);
     //VisualizeFramepointComparision(fp_1,current_frame_ptr->image_l,fp_2,current_frame_ptr->image_l);
     
-    p_caml = T_prev2curr*fp.previous->camera_coordinates;
-    p_camr = T_prev2curr*parameters.T_caml2camr.inverse()*fp.previous->camera_coordinates;
+    p_caml = T_prev2curr*fp->previous->camera_coordinates;
+    p_camr = T_prev2curr*parameters.T_caml2camr.inverse()*fp->previous->camera_coordinates;
 
     //if (fp.previous->landmark_set){
     //    p_caml = current_frame_ptr->T_cam2world * fp.previous->associated_landmark->world_coordinates;
@@ -156,11 +157,11 @@ void PoseOptimizer::ComputeError(Framepoint fp){
     };
     
     // Calculating Reprojection Error - Order is important - (Sampled-Fixed)
-    reproj_error[0] = lcam_pixels[0] - fp.keypoint_l.keypoint.pt.x;
-    reproj_error[1] = lcam_pixels[1] - fp.keypoint_l.keypoint.pt.y;
+    reproj_error[0] = lcam_pixels[0] - fp->keypoint_l.keypoint.pt.x;
+    reproj_error[1] = lcam_pixels[1] - fp->keypoint_l.keypoint.pt.y;
 
-    reproj_error[2] = rcam_pixels[0] - fp.keypoint_r.keypoint.pt.x;
-    reproj_error[3] = rcam_pixels[1] - fp.keypoint_r.keypoint.pt.y;
+    reproj_error[2] = rcam_pixels[0] - fp->keypoint_r.keypoint.pt.x;
+    reproj_error[3] = rcam_pixels[1] - fp->keypoint_r.keypoint.pt.y;
     //reproj_error[2] = 0.0;
     //reproj_error[3] = 0.0;
     
@@ -203,7 +204,7 @@ bool PoseOptimizer::HasInf(Eigen::Vector3f vec){
     return false;
 };
 
-void PoseOptimizer::Linearize(Framepoint fp){
+void PoseOptimizer::Linearize(Framepoint* fp){
     /**
      * @brief In this function we compute / update H, b and omega
      * 
@@ -227,8 +228,8 @@ void PoseOptimizer::Linearize(Framepoint fp){
         }
     }
     else{
-        if(!fp.inlier){
-            fp.inlier = true;
+        if(!fp->inlier){
+            fp->inlier = true;
             inliers++;
         };
 
@@ -455,9 +456,10 @@ void PoseOptimizer::OptimizeOnce(){
     iteration_error = 0;
     inliers = 0;
 
-    for(Framepoint fp : current_frame_ptr->points){
-        ComputeError(fp);
-        Linearize(fp);
+    for(int i =0; i < current_frame_ptr->points.size(); i++){
+        Framepoint* fp_ptr = current_frame_ptr->points[i].get();
+        ComputeError(fp_ptr);
+        Linearize(fp_ptr);
     };
     
     Solve();
