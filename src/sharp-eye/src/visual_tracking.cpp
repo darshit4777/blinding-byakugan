@@ -97,6 +97,13 @@ int VisualTracking::FindCorrespondences(FramepointPointerVector &previous_frame,
         };
 
         if(match_shortlist.empty()){
+            // This means that for the query point, there is no match in the current frame
+
+            // We check if the queried point itself has a previous
+            if(query_framepoint->previous == nullptr){
+                // This point is then a truly lost point - it has no forward or backward correspondence
+                lost_points.push_back(previous_frame[i]);
+            }
             continue;
         };
 
