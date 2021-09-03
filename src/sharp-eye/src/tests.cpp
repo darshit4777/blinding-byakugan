@@ -676,7 +676,7 @@ class TestLandmarkOptimization{
                 framepoint_ptr->world_coordinates = landmark_position;
 
                 // Add the measurement to the vector
-                framepoint_ptr->parent_frame = frame_ptr;
+                framepoint_ptr->parent_frame = frame_ptr.get();
                 framepoint_vector.push_back(framepoint_ptr);
 
                 std::cout<<"Valid measurement created"<<std::endl;

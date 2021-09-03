@@ -144,7 +144,12 @@ class VisualTracking{
     bool HasInf(Eigen::Vector3f vec);
 
     void CreateAndUpdateLandmarks(Frame* current_frame_ptr,LocalMap* lmap_ptr);
+    
+    void RecoverLostPoints(Frame* current_frame_ptr);
+    
     private:
     void InitializeStateJacobian();
+
+    
 
 };

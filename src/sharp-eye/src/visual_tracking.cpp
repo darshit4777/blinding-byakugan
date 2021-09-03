@@ -284,8 +284,7 @@ void VisualTracking::CreateAndUpdateLandmarks(Frame* current_frame_ptr,LocalMap*
                             actively_tracked_landmarks.push_back(framepoint_ptr->associated_landmark);
                         };
                         count = 0;
-                        break;
-                        
+                        break; 
                     }
                     else{
                         count++;
@@ -307,6 +306,94 @@ void VisualTracking::CreateAndUpdateLandmarks(Frame* current_frame_ptr,LocalMap*
         };
     };
 
+}
+
+
+void VisualTracking::RecoverLostPoints(Frame* current_frame_ptr){
+    /**
+     * @brief Project framepoints from the lost points vector onto the current frame
+     * see if the descriptor of the projected point is close enough to that of the 
+     * previous point - if it is, then we conclude that the lost point has been viewed 
+     * again. We then create a new framepoint in the Frame and connect it ot the lost 
+     * point
+     * 
+     */
+
+    auto orb_descriptor = cv::ORB::create();
+
+    for(int i = 0; i < lost_points.size(); i++){
+        Framepoint* lost_fp_ptr = lost_points[i].get();
+
+        // Obtain the camera coordinates
+        Eigen::Vector3f camera_coordinates;
+        camera_coordinates = current_frame_ptr->T_cam2world * lost_fp_ptr->world_coordinates;
+
+        // Project the point
+        Eigen::Vector3f lcam_pixels;
+        lcam_pixels = camera_left.intrinsics * camera_coordinates;
+        lcam_pixels[0] = lcam_pixels[0]/lcam_pixels[2];
+        lcam_pixels[1] = lcam_pixels[1]/lcam_pixels[2];
+
+        // Check if the point is valid
+        if(lcam_pixels.hasNaN()){
+            std::cout<<"Invalid pixels - NaN"<<std::endl;
+            continue;
+        };
+        if(lcam_pixels[0] < 0 || lcam_pixels[1] < 0){
+            continue;
+        };
+        if(lcam_pixels[0] > 720 || lcam_pixels[1] > 480){
+            continue;
+        };
+
+        // Now we compute the descriptor at this point
+         
+        cv::Mat descriptor;
+        cv::KeyPoint kp;
+        kp.pt.x = lcam_pixels[0];
+        kp.pt.y = lcam_pixels[1];
+        std::vector<cv::KeyPoint> kp_vector;
+        std::vector<std::vector<cv::KeyPoint>> kp_parent_vector;
+        kp_vector.push_back(kp);
+        orb_descriptor->detectAndCompute(current_frame_ptr->image_l,cv::noArray(),kp_vector,descriptor,true);
+        
+        // Now we compare the descriptor computed and the one that exists in the lost fp
+        double distance = cv::norm(lost_fp_ptr->keypoint_l.descriptor,descriptor,cv::NORM_HAMMING2);
+        if(distance < 6){
+            // We consider this a match 
+            // Create a new framepoint and connect it to this one
+            boost::shared_ptr<Framepoint> fp;
+            fp = boost::make_shared<Framepoint>();
+            Framepoint* fp_ptr = fp.get();
+            //TODO How do we add the right keypoint here
+            fp_ptr->keypoint_l.descriptor = descriptor;
+            fp_ptr->keypoint_l.keypoint.pt.x = lcam_pixels[0];
+            fp_ptr->keypoint_l.keypoint.pt.y = lcam_pixels[0];
+            fp_ptr->camera_coordinates = camera_coordinates;
+            fp_ptr->inlier = false;
+            fp_ptr->landmark_set = false;
+            fp_ptr->world_coordinates = current_frame_ptr->T_world2cam * camera_coordinates;
+            fp_ptr->previous = lost_fp_ptr;
+            fp_ptr->parent_frame = current_frame_ptr;
+            lost_fp_ptr->next = fp_ptr;
+
+            // Add to the current frame
+            current_frame_ptr->points.push_back(fp);
+
+            // Remove the lost point from the list of lost points
+            lost_points.erase(lost_points.begin() + i);
+            // Adjusting index to account for lost point
+            i--;
+        }
+        else{
+            // The matching distance is not close enough - its not a match
+            continue;
+        };
+
+    };
+
+    delete orb_descriptor;
+    return;
 }
 
 VisualTracking::ManifoldDerivative VisualTracking::CalculateMotionJacobian(Frame* current_frame_ptr,Frame* previous_frame_ptr){
@@ -430,6 +517,7 @@ void VisualTracking::InitializeNode(){
             framepoint_ptr->inlier = false;
             framepoint_ptr->next = NULL;
             framepoint_ptr->associated_landmark = NULL;
+            framepoint_ptr->parent_frame = frame_ptr;
         };
 
         // TODO : what if the framepoint vector is empty ? 
@@ -508,6 +596,7 @@ void VisualTracking::InitializeNode(){
                 framepoint_ptr->inlier = false;
                 framepoint_ptr->next = NULL;
                 framepoint_ptr->associated_landmark = NULL;
+                framepoint_ptr->parent_frame = frame_ptr;
             };
             return;
         }
@@ -526,6 +615,7 @@ void VisualTracking::InitializeNode(){
                     framepoint_ptr->inlier = false;
                     framepoint_ptr->next = NULL;
                     framepoint_ptr->associated_landmark = NULL;
+                    framepoint_ptr->parent_frame = frame_ptr;
                 };
                 std::cout<<"Pose Prediction applied"<<std::endl;
             }
@@ -542,6 +632,7 @@ void VisualTracking::InitializeNode(){
                     framepoint_ptr->inlier = false;
                     framepoint_ptr->next = NULL;
                     framepoint_ptr->associated_landmark = NULL;
+                    framepoint_ptr->parent_frame = frame_ptr;
                 };
                 std::cout<<"Pose Prediction Not applied"<<std::endl;
             };

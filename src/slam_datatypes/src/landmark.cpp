@@ -57,7 +57,7 @@ void Landmark::PoseOptimizer::ComputeError(Framepoint& fp){
      * landmark.
      */
     
-    Frame* frame_ptr = fp.parent_frame.get();
+    Frame* frame_ptr = fp.parent_frame;
 
     // Estimated camera coordinates in the left camera
     p_caml = frame_ptr->T_cam2world * estimated_world_coordinates;
