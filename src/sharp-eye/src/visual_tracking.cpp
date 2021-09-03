@@ -274,7 +274,7 @@ void VisualTracking::CreateAndUpdateLandmarks(Frame* current_frame_ptr,LocalMap*
                 
                 if(framepoint_ptr->previous != nullptr){
                     // Check if the previous has a landmark associated with it
-                    if(framepoint_ptr->associated_landmark != nullptr){
+                    if(framepoint_ptr->landmark_set){
                         // Previous has a landmark associated with it - update it.
                         framepoint_ptr->associated_landmark->UpdateLandmark(current_frame_ptr->points[i]);
                         // Need to be sure here that we aren't adding the same landmark again and again
@@ -302,6 +302,8 @@ void VisualTracking::CreateAndUpdateLandmarks(Frame* current_frame_ptr,LocalMap*
                 boost::shared_ptr<Landmark> landmark_ptr = boost::make_shared<Landmark>(current_frame_ptr->points[i]);
                 lmap_ptr->AddLandmark(landmark_ptr);
                 actively_tracked_landmarks.push_back(landmark_ptr);
+                framepoint_ptr->associated_landmark = landmark_ptr;
+                framepoint_ptr->landmark_set = true;
             };
         };
     };
@@ -641,9 +643,6 @@ void VisualTracking::InitializeNode(){
         };  
     };  
 };
-
-
-
 
 bool VisualTracking::HasInf(Eigen::Vector3f vec){
     /**

@@ -104,12 +104,16 @@ void PoseOptimizer::ComputeError(Framepoint* fp){
     p_caml = T_prev2curr*fp->previous->camera_coordinates;
     p_camr = T_prev2curr*parameters.T_caml2camr.inverse()*fp->previous->camera_coordinates;
 
-    //if (fp.previous->landmark_set){
-    //    p_caml = current_frame_ptr->T_cam2world * fp.previous->associated_landmark->world_coordinates;
-    //    //increase weight for landmarks
-    //    omega = 1.2 * omega;
-    //    p_camr = parameters.T_caml2camr.inverse()*p_caml;
-    //};
+    if (fp->previous->landmark_set){
+        // We first convert the landmark world coordinates to previous camera coordinates
+        Eigen::Vector3f p_caml_prev;
+        p_caml_prev = fp->previous->parent_frame->T_cam2world * fp->previous->associated_landmark->world_coordinates;
+        p_caml = T_prev2curr * p_caml_prev;
+        p_camr = T_prev2curr*parameters.T_caml2camr.inverse()*p_caml_prev;
+
+        //increase weight for landmarks
+        omega = 1.2 * omega;
+    };
 
     // Checking coordinates for invalid values
     if(HasInf(p_caml) || HasInf(p_camr)){
