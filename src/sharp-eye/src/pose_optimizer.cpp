@@ -91,7 +91,7 @@ void PoseOptimizer::ComputeError(Framepoint* fp){
      * 
     */
     
-    if(fp->previous == nullptr){
+    if(fp->previous == NULL){
         compute_success = false;
         return;
     }

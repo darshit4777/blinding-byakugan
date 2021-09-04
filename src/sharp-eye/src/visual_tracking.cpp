@@ -45,6 +45,11 @@ int VisualTracking::FindCorrespondences(FramepointPointerVector& previous_frame,
     // TODO : Check if sorting is needed, Framepoints may already have their keypoints sorted.
 
     int correspondences = 0;
+
+    // Initialization
+    for(int i =0; i < current_frame.size(); i++){
+        current_frame[i]->previous = NULL;
+    }
     
     // Sort Previous
     std::sort(previous_frame.begin(),previous_frame.end(),[](const FramepointShared& a,const FramepointShared& b){
@@ -513,7 +518,9 @@ void VisualTracking::InitializeNode(){
         LocalMap* lmap_ptr = map.GetLastLocalMap();
 
         // Create a new frame
-        lmap_ptr->CreateNewFrame(img_l,img_r,framepoint_vec);
+        Eigen::Transform<float,3,2> T;
+        T.setIdentity();
+        lmap_ptr->CreateNewFrame(img_l,img_r,framepoint_vec,T);
         
         // Get a raw pointer to the frame
         Frame* frame_ptr = lmap_ptr->GetLastFrame();
@@ -525,7 +532,7 @@ void VisualTracking::InitializeNode(){
             framepoint_ptr->landmark_set = false;
             framepoint_ptr->inlier = false;
             framepoint_ptr->next = NULL;
-            framepoint_ptr->associated_landmark = NULL;
+            //framepoint_ptr->associated_landmark = NULL;
             framepoint_ptr->parent_frame = frame_ptr;
         };
 
@@ -604,7 +611,7 @@ void VisualTracking::InitializeNode(){
                 framepoint_ptr->landmark_set = false;
                 framepoint_ptr->inlier = false;
                 framepoint_ptr->next = NULL;
-                framepoint_ptr->associated_landmark = NULL;
+                //framepoint_ptr->associated_landmark = NULL;
                 framepoint_ptr->parent_frame = frame_ptr;
             };
             return;
@@ -623,7 +630,7 @@ void VisualTracking::InitializeNode(){
                     framepoint_ptr->landmark_set = false;
                     framepoint_ptr->inlier = false;
                     framepoint_ptr->next = NULL;
-                    framepoint_ptr->associated_landmark = NULL;
+                    //framepoint_ptr->associated_landmark = NULL;
                     framepoint_ptr->parent_frame = frame_ptr;
                 };
                 std::cout<<"Pose Prediction applied"<<std::endl;
@@ -640,7 +647,7 @@ void VisualTracking::InitializeNode(){
                     framepoint_ptr->landmark_set = false;
                     framepoint_ptr->inlier = false;
                     framepoint_ptr->next = NULL;
-                    framepoint_ptr->associated_landmark = NULL;
+                    //framepoint_ptr->associated_landmark = NULL;
                     framepoint_ptr->parent_frame = frame_ptr;
                 };
                 std::cout<<"Pose Prediction Not applied"<<std::endl;
