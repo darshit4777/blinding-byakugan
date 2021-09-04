@@ -104,7 +104,7 @@ void PoseOptimizer::ComputeError(Framepoint* fp){
     p_caml = T_prev2curr*fp->previous->camera_coordinates;
     p_camr = T_prev2curr*parameters.T_caml2camr.inverse()*fp->previous->camera_coordinates;
 
-    if (fp->previous->landmark_set){
+    if (fp->previous->associated_landmark != NULL){
         // We first convert the landmark world coordinates to previous camera coordinates
         Eigen::Vector3f p_caml_prev;
         p_caml_prev = fp->previous->parent_frame->T_cam2world * fp->previous->associated_landmark->world_coordinates;
