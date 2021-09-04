@@ -29,7 +29,7 @@ VisualTracking::VisualTracking(Camera &cam_left,Camera &cam_right){
     std::cout<<"Visual Tracking Initialized"<<std::endl;  
 };
 
-int VisualTracking::FindCorrespondences(FramepointPointerVector &previous_frame,FramepointPointerVector &current_frame){
+int VisualTracking::FindCorrespondences(FramepointPointerVector& previous_frame,FramepointPointerVector& current_frame){
 
     /**
      * @brief Finds the correspondences / matches between the framepoint vector of
@@ -74,14 +74,18 @@ int VisualTracking::FindCorrespondences(FramepointPointerVector &previous_frame,
         
         // Loop to search for the top of the rectangular region
         // TODO We need to fix this line = its too shabby
-        while(current_frame[id_current].get()->keypoint_l.keypoint.pt.y < ymin){
+        while((current_frame[id_current].get()->keypoint_l.keypoint.pt.y < ymin) && (id_current < current_frame.size())){
             id_current++;
+            if(id_current >= current_frame.size()){
+                break;
+            };
         };
-
+        
         // The search point is now within the rows of the rectangular region
         // We check each keypoint and see if it obeys the column constraints
         // when the lower row of the rectangular region is breached, we move 
         // to the next point
+
         while(current_frame[id_current].get()->keypoint_l.keypoint.pt.y < ymax){
             if(id_current >= current_frame.size()){
                 break;
@@ -94,6 +98,9 @@ int VisualTracking::FindCorrespondences(FramepointPointerVector &previous_frame,
                 match_shortlist.push_back(id_current);
             }
             id_current++;
+            if(id_current >= current_frame.size()){
+                break;
+            }
         };
 
         if(match_shortlist.empty()){

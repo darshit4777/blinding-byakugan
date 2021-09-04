@@ -439,6 +439,12 @@ class TestIncrementalMotion{
                     new_pose = current_frame->T_world2cam;
                 };
 
+                Eigen::AngleAxisf x_rotation = Eigen::AngleAxisf(M_PI/2,Eigen::Vector3f::UnitX());
+                Eigen::AngleAxisf y_rotation = Eigen::AngleAxisf(-M_PI/2,Eigen::Vector3f::UnitY());
+
+                new_pose = new_pose * x_rotation;
+                new_pose = new_pose * y_rotation;
+
                 PublishPose(new_pose);
                 
                 // Calculate Motion Derivative
@@ -745,12 +751,6 @@ int main(int argc, char **argv){
     image_transport::ImageTransport it(nh);
     image_transport::Subscriber imageSub_l = it.subscribe("cam0/image_raw", 1, boost::bind(CameraCallback,_1,0));
     image_transport::Subscriber imageSub_r = it.subscribe("cam1/image_raw", 1, boost::bind(CameraCallback,_1,1));
-    //TestIncrementalMotion test(nh);
-    //Eigen::Vector3f landmark_position;
-    //landmark_position << 1.0, 3.0, -5.0;
-    //std::cout<<"Initial Landmark Position"<<std::endl;
-    //std::cout<<landmark_position<<std::endl;
-    //TestLandmarkOptimization test(landmark_position,15);
-    TestSharedPointers test;
+    TestIncrementalMotion test(nh);
     return 0;
 }

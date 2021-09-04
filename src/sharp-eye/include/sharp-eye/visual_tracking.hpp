@@ -80,7 +80,7 @@ class VisualTracking{
      * @param current_frame 
      * @return int << returns the number of correspondences 
      */
-    int FindCorrespondences(FramepointPointerVector &previous_frame,FramepointPointerVector &current_frame);
+    int FindCorrespondences(FramepointPointerVector& previous_frame,FramepointPointerVector& current_frame);
 
     /**
      * @brief Calculates and returns the Jacobian matrix of the projection equation. 
