@@ -485,11 +485,10 @@ void VisualTracking::SetPredictionCallTime(){
 void VisualTracking::SetFramepointVector(FramepointVector& framepoints){
     // Sets the framepoint vector
     // Reassigning all framepoints to heap memory and adding them to the framepoint vector
-
+    framepoint_vec.clear();
     for(int i = 0; i < framepoints.size(); i++){
-     boost::shared_ptr<Framepoint> fp_ptr = boost::make_shared<Framepoint>(framepoints[i]);
-     framepoint_vec.push_back(fp_ptr);
-
+        boost::shared_ptr<Framepoint> fp_ptr = boost::make_shared<Framepoint>(framepoints[i]);
+        framepoint_vec.push_back(fp_ptr);
     }
     return;
 };

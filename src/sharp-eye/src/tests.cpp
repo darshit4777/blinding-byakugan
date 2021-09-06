@@ -415,6 +415,7 @@ class TestIncrementalMotion{
                 Calculate3DCoordinates();
                 
                 // Store the framepoints for tracking
+                std::cout<<"Framepoint Vector Size"<<std::endl;
                 std::cout<<framepoints.size()<<std::endl;
                 tracking->SetFramepointVector(framepoints);
                 framepoints.clear();
@@ -431,10 +432,11 @@ class TestIncrementalMotion{
                 LocalMap* lmap_ptr = tracking->map.GetLastLocalMap();
                 current_frame = lmap_ptr->GetLastFrame();
                 
+                
                 // TODO : This is a band-aid patch - not quite elegant. A better solution would be to use class variables 
                 // that keep track of current and previous frames
                 if(tracking->frame_correspondences > 0){
-                    new_pose = tracking->EstimateIncrementalMotion(*current_frame);
+                    new_pose = tracking->EstimateIncrementalMotion();
                 }
                 else{
                     new_pose = current_frame->T_world2cam;
