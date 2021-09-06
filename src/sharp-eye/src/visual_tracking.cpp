@@ -90,7 +90,9 @@ int VisualTracking::FindCorrespondences(FramepointPointerVector& previous_frame,
         // We check each keypoint and see if it obeys the column constraints
         // when the lower row of the rectangular region is breached, we move 
         // to the next point
-
+        if(id_current >= current_frame.size()){
+            continue;
+        };
         while(current_frame[id_current].get()->keypoint_l.keypoint.pt.y < ymax){
             if(id_current >= current_frame.size()){
                 break;
@@ -530,7 +532,6 @@ void VisualTracking::InitializeNode(){
             framepoint_ptr->landmark_set = false;
             framepoint_ptr->inlier = false;
             framepoint_ptr->next = NULL;
-            //framepoint_ptr->associated_landmark = NULL;
             framepoint_ptr->parent_frame = frame_ptr;
         };
 
@@ -609,7 +610,6 @@ void VisualTracking::InitializeNode(){
                 framepoint_ptr->landmark_set = false;
                 framepoint_ptr->inlier = false;
                 framepoint_ptr->next = NULL;
-                //framepoint_ptr->associated_landmark = NULL;
                 framepoint_ptr->parent_frame = frame_ptr;
             };
             return;
@@ -623,12 +623,11 @@ void VisualTracking::InitializeNode(){
                 frame_ptr->T_cam2world = frame_ptr->T_world2cam.inverse();
                 
                 for(int i =0; i < frame_ptr->points.size(); i++){
-                    Framepoint* framepoint_ptr;
+                    Framepoint* framepoint_ptr = frame_ptr->points[i].get();
                     framepoint_ptr->world_coordinates = frame_ptr->T_world2cam*framepoint_ptr->camera_coordinates;
                     framepoint_ptr->landmark_set = false;
                     framepoint_ptr->inlier = false;
                     framepoint_ptr->next = NULL;
-                    //framepoint_ptr->associated_landmark = NULL;
                     framepoint_ptr->parent_frame = frame_ptr;
                 };
                 std::cout<<"Pose Prediction applied"<<std::endl;
@@ -640,12 +639,11 @@ void VisualTracking::InitializeNode(){
                 frame_ptr->T_world2cam = prev_frame_ptr->T_world2cam;
                 frame_ptr->T_cam2world = prev_frame_ptr->T_cam2world;
                 for(int i =0; i < frame_ptr->points.size(); i++){
-                    Framepoint* framepoint_ptr;
+                    Framepoint* framepoint_ptr = frame_ptr->points[i].get();
                     framepoint_ptr->world_coordinates = frame_ptr->T_world2cam * framepoint_ptr->camera_coordinates;
                     framepoint_ptr->landmark_set = false;
                     framepoint_ptr->inlier = false;
                     framepoint_ptr->next = NULL;
-                    //framepoint_ptr->associated_landmark = NULL;
                     framepoint_ptr->parent_frame = frame_ptr;
                 };
                 std::cout<<"Pose Prediction Not applied"<<std::endl;
