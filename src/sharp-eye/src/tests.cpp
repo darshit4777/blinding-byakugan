@@ -415,8 +415,9 @@ class TestIncrementalMotion{
                 Calculate3DCoordinates();
                 
                 // Store the framepoints for tracking
+                std::cout<<framepoints.size()<<std::endl;
                 tracking->SetFramepointVector(framepoints);
-
+                framepoints.clear();
                 // Initialize a node
                 /// This step will initialize a new frame or local map.
                 tracking->img_l = image_l;

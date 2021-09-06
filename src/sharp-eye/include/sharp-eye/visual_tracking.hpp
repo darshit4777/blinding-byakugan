@@ -103,7 +103,7 @@ class VisualTracking{
      * @param frame_ptr 
      * @return Eigen::Transform<float,3,2> 
      */
-    Eigen::Transform<float,3,2> EstimateIncrementalMotion(Frame &frame_ptr);
+    Eigen::Transform<float,3,2> EstimateIncrementalMotion();
 
     /**
      * @brief Calculates the jacobian of the motion wrt time.

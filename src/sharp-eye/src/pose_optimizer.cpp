@@ -59,9 +59,11 @@ void PoseOptimizer::Initialize(Frame* curr_frame_ptr,Frame* prev_frame_ptr,Local
     current_frame_ptr = curr_frame_ptr;
     previous_frame_ptr = prev_frame_ptr;
     lmap_ptr = local_map_ptr;
+    std::cout<<"No of points"<<std::endl;
+    std::cout<<current_frame_ptr->points.size()<<std::endl;
     // No of measurements
-    std::cout<<"Initial Pose"<<std::endl;
-    std::cout<<current_frame_ptr->T_world2cam.matrix()<<std::endl;
+    //std::cout<<"Initial Pose"<<std::endl;
+    //std::cout<<current_frame_ptr->T_world2cam.matrix()<<std::endl;
     measurements = 0;
     for(int i =0; i< current_frame_ptr->points.size(); i++){
         // TODO : Fix this statement - too shabby

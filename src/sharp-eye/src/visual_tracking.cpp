@@ -249,18 +249,17 @@ Eigen::Matrix<float,4,6> VisualTracking::FindJacobian(Eigen::Vector3f& left_cam_
     return J;
 };
 
-Eigen::Transform<float,3,2> VisualTracking::EstimateIncrementalMotion(Frame &frame_ptr){
+Eigen::Transform<float,3,2> VisualTracking::EstimateIncrementalMotion(){
     optimizer->parameters.T_caml2camr = T_caml2camr;
      
     LocalMap* lmap_ptr = map.GetLastLocalMap();
     Frame* previous_frame_ptr = lmap_ptr->GetPreviousFrame();
-    optimizer->Initialize(&frame_ptr,previous_frame_ptr,lmap_ptr);
+    Frame* current_frame_ptr = lmap_ptr->GetLastFrame();
+    optimizer->Initialize(current_frame_ptr,previous_frame_ptr,lmap_ptr);
     optimizer->OptimizeOnce();
     optimizer->Converge();
 
-
-    
-    return frame_ptr.T_world2cam;
+    return current_frame_ptr->T_world2cam;
 };
 
 void VisualTracking::CreateAndUpdateLandmarks(Frame* current_frame_ptr,LocalMap* lmap_ptr){
