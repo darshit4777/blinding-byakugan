@@ -22,11 +22,14 @@ VisualTracking::VisualTracking(Camera &cam_left,Camera &cam_right){
     
     // Initialiaztions
     InitializeStateJacobian();
+    frame_correspondences = 0;
 
     // Optimizer
     optimizer = new PoseOptimizer;
 
+    
     std::cout<<"Visual Tracking Initialized"<<std::endl;  
+
 };
 
 int VisualTracking::FindCorrespondences(FramepointPointerVector& previous_frame,FramepointPointerVector& current_frame){
