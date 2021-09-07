@@ -14,7 +14,7 @@ PoseOptimizer::PoseOptimizer(){
     parameters.minimum_depth = 0.1;
     parameters.maximum_depth = 10.0;
     parameters.maximum_reliable_depth = 10.0;
-    parameters.kernel_maximum_error = 200;
+    parameters.kernel_maximum_error = 10;
     parameters.max_iterations = 10;
 
     parameters.min_correspondences = 200;
@@ -22,7 +22,7 @@ PoseOptimizer::PoseOptimizer(){
     parameters.angular_delta = 0.001;
     parameters.translation_delta = 0.01;
 
-    parameters.ignore_outliers = true;
+    parameters.ignore_outliers = false;
     parameters.min_inliers = 100;
 
     // Setting up pose optimizer variables
@@ -422,7 +422,7 @@ void PoseOptimizer::OptimizeOnce(){
         ComputeError(fp_ptr);
         Linearize(fp_ptr);
     };
-    
+    std::cout<<"Inliers "<<inliers<<std::endl;
     Solve();
     return;
 }
@@ -435,10 +435,14 @@ void PoseOptimizer::Converge(){
     for(int i =0; i<parameters.max_iterations; i++){
     //TODO : This needs work
         OptimizeOnce();
-        error_delta = iteration_error - previous_error;
+        
+        std::cout<<"Iteration Error "<<iteration_error<<std::endl;
+        error_delta = fabs(iteration_error - previous_error);
         previous_error = iteration_error;
+        
+        std::cout<<"Error Delta "<<error_delta<<std::endl;
 
-        if(error_delta < 1){
+        if(error_delta < 1e-5){
             std::cout<<"Converged after "<<i<<" iterations"<<std::endl;
             Update();
             return;

@@ -77,8 +77,8 @@ int VisualTracking::FindCorrespondences(FramepointPointerVector& previous_frame,
         ymin = std::max(int(query_framepoint->keypoint_l.keypoint.pt.y - 50),0);
         ymax = std::min(int(query_framepoint->keypoint_l.keypoint.pt.y + 50),img_height);
 
-        xmin = std::max(int(query_framepoint->keypoint_l.keypoint.pt.x - 50),0);
-        xmax = std::min(int(query_framepoint->keypoint_l.keypoint.pt.x + 50),img_width);
+        xmin = std::max(int(query_framepoint->keypoint_l.keypoint.pt.x - 200),0);
+        xmax = std::min(int(query_framepoint->keypoint_l.keypoint.pt.x + 200),img_width);
         
         // Loop to search for the top of the rectangular region
         // TODO We need to fix this line = its too shabby
