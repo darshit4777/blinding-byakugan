@@ -570,7 +570,7 @@ class TestPoseOptimizer{
         T_world2cam2.translation().y() = 0.0;
         T_world2cam2.translation().z() = -5.0;
         //Eigen::AngleAxis<float> z(Degrees2Radians(15),Eigen::Vector3f(0,0,1));
-        Eigen::AngleAxis<float> y(Degrees2Radians(2),Eigen::Vector3f(0,1,0));
+        Eigen::AngleAxis<float> y(Degrees2Radians(15),Eigen::Vector3f(0,1,0));
         //Eigen::AngleAxis<float> x(Degrees2Radians(3),Eigen::Vector3f(1,0,0));
         
 
@@ -687,7 +687,7 @@ class TestLandmarkOptimization{
                 framepoint_ptr->camera_coordinates = T_world2cam.inverse() * landmark_position;
 
                 // lets add some noise to it
-                framepoint_ptr->camera_coordinates = framepoint_ptr->camera_coordinates + 0.5 * Eigen::Vector3f::Random();
+                framepoint_ptr->camera_coordinates = framepoint_ptr->camera_coordinates + 0.15 * Eigen::Vector3f::Random();
                 framepoint_ptr->world_coordinates = landmark_position;
 
                 // Add the measurement to the vector
@@ -760,7 +760,7 @@ int main(int argc, char **argv){
     image_transport::ImageTransport it(nh);
     image_transport::Subscriber imageSub_l = it.subscribe("cam0/image_raw", 1, boost::bind(CameraCallback,_1,0));
     image_transport::Subscriber imageSub_r = it.subscribe("cam1/image_raw", 1, boost::bind(CameraCallback,_1,1));
-    //TestIncrementalMotion test(nh);
-    TestPoseOptimizer test;
+    TestIncrementalMotion test(nh);
+    //TestPoseOptimizer test;
     return 0;
 }

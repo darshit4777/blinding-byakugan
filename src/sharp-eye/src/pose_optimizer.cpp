@@ -15,7 +15,7 @@ PoseOptimizer::PoseOptimizer(){
     parameters.maximum_depth = 10.0;
     parameters.maximum_reliable_depth = 10.0;
     parameters.kernel_maximum_error = 10;
-    parameters.max_iterations = 10;
+    parameters.max_iterations = 100;
 
     parameters.min_correspondences = 200;
 
@@ -347,7 +347,7 @@ void PoseOptimizer::Solve(){
     Eigen::MatrixXf identity6;
     identity6.resize(6,6);
     identity6.setIdentity();
-    float damping_factor = measurements * 1;
+    float damping_factor = measurements * 5;
     H = H + damping_factor * identity6;
     dx = H.ldlt().solve(-b);
     //dx = H.fullPivLu().solve(-b);
