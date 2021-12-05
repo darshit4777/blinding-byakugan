@@ -157,7 +157,12 @@ class TestDetectFeatures{
 
 class TestGetMatchedKeypoints{
     public:
+    int image_idx;
+    int image_idx_max;
+
     TestGetMatchedKeypoints(){
+        image_idx = 1;
+        image_idx_max = 50;
         TestMain();
         return;
     }
@@ -166,26 +171,27 @@ class TestGetMatchedKeypoints{
         std::vector<KeypointWD> features_l;
         std::vector<KeypointWD> features_r;
         int count = 0;
-        while(ros::ok()){
-            ros::spinOnce();
-            if(received_l){
-                features_l.clear();
-                features_l = triangulator.DetectAndComputeFeatures(&image_l,features_l,false);
-                //count = count + 1;
-            }
-            if(received_r){
-                features_r.clear();
-                features_r = triangulator.DetectAndComputeFeatures(&image_r,features_r,false);
-            }
-            if(received_l && received_r){
-                // Get Matches
-                MatchVector matches = triangulator.GetKeypointMatches(features_l,features_r);
-                DrawMatches(matches,&image_l,&image_r);
-                cv::imshow(OPENCV_WINDOW_LEFT,image_l);
-                cv::waitKey(5);
-                cv::imshow(OPENCV_WINDOW_RIGHT,image_r);
-                cv::waitKey(5);   
-            }
+        while(image_idx < image_idx_max){
+            
+            // Get new images
+            GetCameraImages(image_idx);
+
+            features_l.clear();
+            features_l = triangulator.DetectAndComputeFeatures(&image_l,features_l,false);
+            
+            features_r.clear();
+            features_r = triangulator.DetectAndComputeFeatures(&image_r,features_r,false);
+            
+            // Get Matches
+            MatchVector matches = triangulator.GetKeypointMatches(features_l,features_r);
+            DrawMatches(matches,&image_l,&image_r);
+            cv::imshow(OPENCV_WINDOW_LEFT,image_l);
+            cv::waitKey(5);
+            cv::imshow(OPENCV_WINDOW_RIGHT,image_r);
+            cv::waitKey(5);   
+
+            image_idx++;
+            
         };
         cv::destroyAllWindows();
     }
@@ -227,6 +233,8 @@ class TestGenerate3DCoordinates{
     typedef pcl::PointXYZI PointGray;
     ros::Publisher pub;
     ros::NodeHandle nh;
+    int image_idx;
+    int image_idx_max;
 
     public:
     TestGenerate3DCoordinates(const ros::NodeHandle &nodehandle){
@@ -236,6 +244,8 @@ class TestGenerate3DCoordinates{
                                0.0,     0.0,        1.0;
 
         nh = nodehandle;
+        image_idx = 1;
+        image_idx_max = 50;
         TestMain();
         return;
     };
@@ -246,25 +256,28 @@ class TestGenerate3DCoordinates{
         std::vector<KeypointWD> features_r;
         pub = nh.advertise< sensor_msgs::PointCloud2 > ("point_cloud", 5);
         int count = 0;
-        while(ros::ok()){
-            ros::spinOnce();
-            if(received_l){
-                features_l.clear();
-                features_l = triangulator.DetectAndComputeFeatures(&image_l,features_l,false);
-            }
-            if(received_r){
-                features_r.clear();
-                features_r = triangulator.DetectAndComputeFeatures(&image_r,features_r,false);
-            }
-            if(received_l && received_r){
-                // Get Matches
-                MatchVector matches = triangulator.GetKeypointMatches(features_l,features_r);
-                //std::cout<<"No of matches "<<matches.size()<<std::endl;
-                FramepointVector framepoints;
-                triangulator.Generate3DCoordinates(matches,framepoints,baseline,focal_length,cam_intrinsics);
-                //std::cout<<"No of framepoints "<<framepoints.size()<<std::endl;
-                DrawPointCloud(framepoints,&image_l);
-            };
+        while(image_idx < image_idx_max){
+            
+            GetCameraImages(image_idx);
+            
+            
+            features_l.clear();
+            features_l = triangulator.DetectAndComputeFeatures(&image_l,features_l,false);
+            
+            features_r.clear();
+            features_r = triangulator.DetectAndComputeFeatures(&image_r,features_r,false);
+            
+            // Get Matches
+            MatchVector matches = triangulator.GetKeypointMatches(features_l,features_r);
+            //std::cout<<"No of matches "<<matches.size()<<std::endl;
+            FramepointVector framepoints;
+            triangulator.Generate3DCoordinates(matches,framepoints,baseline,focal_length,cam_intrinsics);
+            //std::cout<<"No of framepoints "<<framepoints.size()<<std::endl;
+            cv::imshow(OPENCV_WINDOW_LEFT,image_l);
+            cv::waitKey(0);
+            DrawPointCloud(framepoints,&image_l);
+            
+            image_idx++;
         };
         cv::destroyAllWindows();
     };
@@ -287,8 +300,9 @@ class TestGenerate3DCoordinates{
             float x,y;
             x = framepoint.keypoint_l.keypoint.pt.x;
             y = framepoint.keypoint_l.keypoint.pt.y;
+            
             cv::Scalar intensity;
-            intensity = image_l->at<uchar>(x,y);
+            intensity = image_l->at<uchar>(y,x);
             point.intensity = intensity.val[0];
 
             pcl_cloud.points.push_back(point);
@@ -838,7 +852,7 @@ int main(int argc, char **argv){
     cam_left_image_list = GetImageFilenames(fb_left);
     cam_right_image_list = GetImageFilenames(fb_right);
     
-    TestDetectFeatures test;
+    TestGenerate3DCoordinates test(nh);
 
     return 0;
 }
