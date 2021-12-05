@@ -56,12 +56,13 @@ void CameraCallback(const sensor_msgs::ImageConstPtr& msg,int cam){
     }
 };
 
-void GetCameraImages(std::filebuf &fb){
+std::vector<std::vector<std::string>> GetImageFilenames(std::filebuf &fb){
     // Reads the image filenames from a csv - uses opencv to load the images and 
     // assigns the images to image_l and image_r
 
     std::istream file(&fb);
     
+    std::vector<std::vector<std::string>> row;
     std::vector<std::string>   result;
     std::string                line;
     while(!file.eof()){
@@ -77,18 +78,16 @@ void GetCameraImages(std::filebuf &fb){
         {
             result.push_back(cell);
         }
+
         // This checks for a trailing comma with no data after it.
         if (!lineStream && cell.empty())
         {
             // If there was a trailing comma then add an empty element.
             result.push_back("");
         }
-    
-        std::cout<<result.size()<<std::endl;
+        row.push_back(result);
     }
-    
-
-    return;
+    return row;
 }
 
 
@@ -796,7 +795,7 @@ int main(int argc, char **argv){
     //image_transport::Subscriber imageSub_r = it.subscribe("cam1/image_raw", 1, boost::bind(CameraCallback,_1,1));
     std::filebuf fb;
     fb.open("/home/darshit/Code/blinding-byakugan/MH_01_easy/mav0/cam0/data.csv",std::ios::in);
-    GetCameraImages(fb);
+    GetImageFilenames(fb);
     //TestIncrementalMotion test(nh);
     //TestPoseOptimizer test;
     return 0;
