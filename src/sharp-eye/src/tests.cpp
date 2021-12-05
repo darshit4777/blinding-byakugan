@@ -24,6 +24,10 @@ cv::Mat image_r;
 cv::Mat undistorted_l;
 cv::Mat undistorted_r;
 bool received_l,received_r;
+std::vector<std::vector<std::string>> cam_left_image_list;
+std::vector<std::vector<std::string>> cam_right_image_list;
+int image_idx;
+
 //static const std::string OPENCV_WINDOW = "Image window";
 static const std::string OPENCV_WINDOW_LEFT = "Left Image window";
 static const std::string OPENCV_WINDOW_RIGHT = "Right Image window";
@@ -86,8 +90,35 @@ std::vector<std::vector<std::string>> GetImageFilenames(std::filebuf &fb){
             result.push_back("");
         }
         row.push_back(result);
+        result.clear();
     }
     return row;
+};
+
+void GetCameraImages(){
+
+    std::string image_path_left = "/home/darshit/Code/blinding-byakugan/MH_01_easy/mav0/cam0/data/";
+    std::string image_path_right = "/home/darshit/Code/blinding-byakugan/MH_01_easy/mav0/cam1/data/";
+
+    std::vector<std::string> fname_row_l = cam_left_image_list[image_idx];
+    std::vector<std::string> fname_row_r = cam_right_image_list[image_idx];
+    
+    std::string image_fname_left = fname_row_l[0];
+    std::string image_fname_right = fname_row_r[0];
+
+    image_path_left = image_path_left+image_fname_left+".png";
+    image_path_right = image_path_right+image_fname_right+".png";
+
+    image_l = cv::imread(image_path_left);
+    image_r = cv::imread(image_path_right);
+
+    cv::imshow(OPENCV_WINDOW_LEFT,image_l);
+    cv::waitKey(0);
+    cv::imshow(OPENCV_WINDOW_RIGHT,image_r);
+    cv::waitKey(0);
+    
+    
+    return;
 }
 
 
@@ -790,13 +821,23 @@ class TestSharedPointers{
 int main(int argc, char **argv){
     ros::init(argc,argv,"image_listener");
     ros::NodeHandle nh;
-    //image_transport::ImageTransport it(nh);
-    //image_transport::Subscriber imageSub_l = it.subscribe("cam0/image_raw", 1, boost::bind(CameraCallback,_1,0));
-    //image_transport::Subscriber imageSub_r = it.subscribe("cam1/image_raw", 1, boost::bind(CameraCallback,_1,1));
-    std::filebuf fb;
-    fb.open("/home/darshit/Code/blinding-byakugan/MH_01_easy/mav0/cam0/data.csv",std::ios::in);
-    GetImageFilenames(fb);
-    //TestIncrementalMotion test(nh);
-    //TestPoseOptimizer test;
+    std::string cam_left_file = argv[1];
+    std::string cam_right_file = argv[2];
+    
+    std::filebuf fb_left;
+    std::filebuf fb_right;
+
+    cv::namedWindow(OPENCV_WINDOW_LEFT);
+    cv::namedWindow(OPENCV_WINDOW_RIGHT);
+
+    fb_left.open(cam_left_file,std::ios::in);
+    fb_right.open(cam_right_file,std::ios::in);
+    std::cout<<cam_left_file<<std::endl;
+    std::cout<<cam_right_file<<std::endl;
+    
+    cam_left_image_list = GetImageFilenames(fb_left);
+    cam_right_image_list = GetImageFilenames(fb_right);
+    image_idx = 1;
+    GetCameraImages();
     return 0;
 }
