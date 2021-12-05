@@ -26,7 +26,6 @@ cv::Mat undistorted_r;
 bool received_l,received_r;
 std::vector<std::vector<std::string>> cam_left_image_list;
 std::vector<std::vector<std::string>> cam_right_image_list;
-int image_idx;
 
 //static const std::string OPENCV_WINDOW = "Image window";
 static const std::string OPENCV_WINDOW_LEFT = "Left Image window";
@@ -95,7 +94,7 @@ std::vector<std::vector<std::string>> GetImageFilenames(std::filebuf &fb){
     return row;
 };
 
-void GetCameraImages(){
+void GetCameraImages(int image_idx){
 
     std::string image_path_left = "/home/darshit/Code/blinding-byakugan/MH_01_easy/mav0/cam0/data/";
     std::string image_path_right = "/home/darshit/Code/blinding-byakugan/MH_01_easy/mav0/cam1/data/";
@@ -113,39 +112,41 @@ void GetCameraImages(){
     image_r = cv::imread(image_path_right);
 
     cv::imshow(OPENCV_WINDOW_LEFT,image_l);
-    cv::waitKey(0);
-    cv::imshow(OPENCV_WINDOW_RIGHT,image_r);
-    cv::waitKey(0);
-    
-    
+    cv::waitKey(3);
     return;
 }
 
 
 class TestDetectFeatures{
     public:
+    int image_idx;
+    int image_idx_max;
     void TestMain(){
         
 
         VisualTriangulation triangulator;
         std::vector<KeypointWD> features;
-        while(ros::ok()){
-            ros::spinOnce();
-            if(received_l){
-                triangulator.DetectAndComputeFeatures(&image_l,features,true);
-                cv::imshow(OPENCV_WINDOW_LEFT,image_l);
-                cv::waitKey(5);
-            }
-            if(received_r){
-                triangulator.DetectAndComputeFeatures(&image_r,features,true);
-                cv::imshow(OPENCV_WINDOW_RIGHT,image_r);
-                cv::waitKey(5);
-            }
+        while(image_idx < image_idx_max){
+            
+            // Get new camera images
+            GetCameraImages(image_idx);
+
+            triangulator.DetectAndComputeFeatures(&image_l,features,true);
+            cv::imshow(OPENCV_WINDOW_LEFT,image_l);
+            cv::waitKey(5);
+            
+            triangulator.DetectAndComputeFeatures(&image_r,features,true);
+            cv::imshow(OPENCV_WINDOW_RIGHT,image_r);
+            cv::waitKey(5);
+            
+            image_idx++;
         };
         cv::destroyAllWindows();
     };
 
-    TestDetectFeatures(int argc, char** argv){
+    TestDetectFeatures(){
+        image_idx = 1;
+        image_idx_max = 50;
         TestMain();
     };
 
@@ -465,11 +466,10 @@ class TestIncrementalMotion{
     void TestMain(){
 
         while(ros::ok()){
-            ros::spinOnce();
             if(received_l && received_r){
                 // Set the time for recieving a new frame
 
-                // Calibrate
+                // Undistort
                 //UndistortImages(cam_l_intrinsics,cam_r_intrinsics,cam_left.distortion_coeffs,cam_right.distortion_coeffs,image_l,image_r);
                 std::cout<<"New Frame"<<std::endl;
                 tracking->SetPredictionCallTime();
@@ -837,7 +837,8 @@ int main(int argc, char **argv){
     
     cam_left_image_list = GetImageFilenames(fb_left);
     cam_right_image_list = GetImageFilenames(fb_right);
-    image_idx = 1;
-    GetCameraImages();
+    
+    TestDetectFeatures test;
+
     return 0;
 }
