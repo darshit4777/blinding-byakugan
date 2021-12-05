@@ -7,7 +7,7 @@ project(slam_datatypes)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-list(APPEND CMAKE_MODULE_PATH "/home/darshit/blinding-byakugan/src/g2o/cmake_modules")
+list(APPEND CMAKE_MODULE_PATH "/home/darshit/Code/blinding-byakugan/src/g2o/cmake_modules")
 
 find_package(G2O REQUIRED)
 include_directories( ${G2O_INCLUDE_DIRS} )

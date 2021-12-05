@@ -56,6 +56,41 @@ void CameraCallback(const sensor_msgs::ImageConstPtr& msg,int cam){
     }
 };
 
+void GetCameraImages(std::filebuf &fb){
+    // Reads the image filenames from a csv - uses opencv to load the images and 
+    // assigns the images to image_l and image_r
+
+    std::istream file(&fb);
+    
+    std::vector<std::string>   result;
+    std::string                line;
+    while(!file.eof()){
+        
+        // Get a new line
+        std::getline(file,line);
+
+        // Add the line to a string stream
+        std::stringstream          lineStream(line);
+        std::string                cell;
+
+        while(std::getline(lineStream,cell, ','))
+        {
+            result.push_back(cell);
+        }
+        // This checks for a trailing comma with no data after it.
+        if (!lineStream && cell.empty())
+        {
+            // If there was a trailing comma then add an empty element.
+            result.push_back("");
+        }
+    
+        std::cout<<result.size()<<std::endl;
+    }
+    
+
+    return;
+}
+
 
 class TestDetectFeatures{
     public:
@@ -185,7 +220,6 @@ class TestGenerate3DCoordinates{
             if(received_l){
                 features_l.clear();
                 features_l = triangulator.DetectAndComputeFeatures(&image_l,features_l,false);
-                //count = count + 1;
             }
             if(received_r){
                 features_r.clear();
@@ -757,10 +791,13 @@ class TestSharedPointers{
 int main(int argc, char **argv){
     ros::init(argc,argv,"image_listener");
     ros::NodeHandle nh;
-    image_transport::ImageTransport it(nh);
-    image_transport::Subscriber imageSub_l = it.subscribe("cam0/image_raw", 1, boost::bind(CameraCallback,_1,0));
-    image_transport::Subscriber imageSub_r = it.subscribe("cam1/image_raw", 1, boost::bind(CameraCallback,_1,1));
-    TestIncrementalMotion test(nh);
+    //image_transport::ImageTransport it(nh);
+    //image_transport::Subscriber imageSub_l = it.subscribe("cam0/image_raw", 1, boost::bind(CameraCallback,_1,0));
+    //image_transport::Subscriber imageSub_r = it.subscribe("cam1/image_raw", 1, boost::bind(CameraCallback,_1,1));
+    std::filebuf fb;
+    fb.open("/home/darshit/Code/blinding-byakugan/MH_01_easy/mav0/cam0/data.csv",std::ios::in);
+    GetCameraImages(fb);
+    //TestIncrementalMotion test(nh);
     //TestPoseOptimizer test;
     return 0;
 }
