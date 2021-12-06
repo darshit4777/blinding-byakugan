@@ -12,10 +12,12 @@ class PoseOptimizer{
     struct params{
         bool ignore_outliers;
         float kernel_maximum_error;
+        float solver_maximum_error;
         float minimum_depth;
         float maximum_depth;
         float maximum_reliable_depth;
         int max_iterations;
+        
 
         // Movement Thresholds
         float angular_delta;

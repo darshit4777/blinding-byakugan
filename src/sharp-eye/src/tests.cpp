@@ -639,11 +639,11 @@ class TestPoseOptimizer{
         T_world2cam1.translation().y() =0;
         T_world2cam1.translation().z() =-5.0; 
         T_world2cam2.setIdentity();
-        T_world2cam2.translation().x() = 0.15;
-        T_world2cam2.translation().y() = 0.15;
+        T_world2cam2.translation().x() = 0.1;
+        T_world2cam2.translation().y() = 0.1;
         T_world2cam2.translation().z() = -5.0;
         //Eigen::AngleAxis<float> z(Degrees2Radians(15),Eigen::Vector3f(0,0,1));
-        Eigen::AngleAxis<float> y(Degrees2Radians(0),Eigen::Vector3f(0,1,0));
+        Eigen::AngleAxis<float> y(Degrees2Radians(5),Eigen::Vector3f(0,1,0));
         //Eigen::AngleAxis<float> x(Degrees2Radians(3),Eigen::Vector3f(1,0,0));
         
 

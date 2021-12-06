@@ -14,7 +14,8 @@ PoseOptimizer::PoseOptimizer(){
     parameters.minimum_depth = 0.1;
     parameters.maximum_depth = 10.0;
     parameters.maximum_reliable_depth = 10.0;
-    parameters.kernel_maximum_error = 200;
+    parameters.kernel_maximum_error = 10;
+    parameters.solver_maximum_error = 10;
     parameters.max_iterations = 100;
 
     parameters.min_correspondences = 200;
@@ -22,7 +23,7 @@ PoseOptimizer::PoseOptimizer(){
     parameters.angular_delta = 0.001;
     parameters.translation_delta = 0.01;
 
-    parameters.ignore_outliers = false;
+    parameters.ignore_outliers = true;
     parameters.min_inliers = 100;
 
     // Setting up pose optimizer variables
@@ -225,18 +226,20 @@ void PoseOptimizer::Linearize(Framepoint* fp){
         return;
     };
     float error_squared = reproj_error.transpose() * reproj_error;
+    std::cout<<error_squared<<std::endl;
     if(error_squared > parameters.kernel_maximum_error){
         if(parameters.ignore_outliers){
             return;
         }
         else{
-            omega = omega * parameters.kernel_maximum_error/iteration_error;
+            omega = omega * parameters.kernel_maximum_error/error_squared;
         }
     }
     else{
+        inliers++;
+
         if(!fp->inlier){
             fp->inlier = true;
-            inliers++;
         };
 
     };
@@ -434,7 +437,15 @@ void PoseOptimizer::Converge(){
     float error_delta = 0;
     for(int i =0; i<parameters.max_iterations; i++){
     //TODO : This needs work
-        OptimizeOnce();
+        OptimizeOnce();    
+        std::cout<<"No of inliers are "<<inliers<<std::endl;
+        cv::waitKey(0);
+        if(inliers < parameters.min_inliers){
+            parameters.ignore_outliers = false;
+        }
+        else{
+            parameters.ignore_outliers = true;
+        }
         
         //std::cout<<"Iteration Error "<<iteration_error<<std::endl;
         error_delta = fabs(iteration_error - previous_error);
@@ -442,7 +453,7 @@ void PoseOptimizer::Converge(){
         
         //std::cout<<"Error Delta "<<error_delta<<std::endl;
 
-        if(error_delta < 1e-5){
+        if((error_delta < 1e-5) && (iteration_error < parameters.solver_maximum_error)){
             std::cout<<"Converged after "<<i<<" iterations"<<std::endl;
             Update();
             return;
