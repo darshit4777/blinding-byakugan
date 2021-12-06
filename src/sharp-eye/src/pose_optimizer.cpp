@@ -14,7 +14,7 @@ PoseOptimizer::PoseOptimizer(){
     parameters.minimum_depth = 0.1;
     parameters.maximum_depth = 10.0;
     parameters.maximum_reliable_depth = 10.0;
-    parameters.kernel_maximum_error = 10;
+    parameters.kernel_maximum_error = 200;
     parameters.max_iterations = 100;
 
     parameters.min_correspondences = 200;
@@ -436,11 +436,11 @@ void PoseOptimizer::Converge(){
     //TODO : This needs work
         OptimizeOnce();
         
-        std::cout<<"Iteration Error "<<iteration_error<<std::endl;
+        //std::cout<<"Iteration Error "<<iteration_error<<std::endl;
         error_delta = fabs(iteration_error - previous_error);
         previous_error = iteration_error;
         
-        std::cout<<"Error Delta "<<error_delta<<std::endl;
+        //std::cout<<"Error Delta "<<error_delta<<std::endl;
 
         if(error_delta < 1e-5){
             std::cout<<"Converged after "<<i<<" iterations"<<std::endl;

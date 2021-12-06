@@ -56,10 +56,10 @@ FeatureVector VisualTriangulation::DetectAndComputeFeatures(cv::Mat* img_ptr,Fea
     std::vector<cv::KeyPoint> image_keypoints;
     
     //  Mask creator for binning in feature detection
-    for(int i =0; i < 4; i++){
+    for(int i =0; i < 6; i++){
         for(int j =0; j<4; j++){
             cv::Mat mask = cv::Mat::zeros(img_ptr->size(),CV_8U);
-            cv::Mat roi(mask, cv::Rect(180*i,120*j,180,120));
+            cv::Mat roi(mask, cv::Rect(120*i,120*j,120,120));
             roi = cv::Scalar(255);
             std::vector<cv::KeyPoint> bin_keypoints;
             cv::Mat descriptors;

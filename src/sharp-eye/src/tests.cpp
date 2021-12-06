@@ -412,6 +412,10 @@ class TestIncrementalMotion{
     // ROS
     ros::NodeHandle nodehandle;
     ros::Publisher pose_publisher;
+
+    // Camera Images
+    int image_idx;
+    int image_idx_max;
     
     TestIncrementalMotion(ros::NodeHandle& nh){
         // Initializing Camera Matrices
@@ -471,6 +475,8 @@ class TestIncrementalMotion{
         nodehandle = nh;
         pose_publisher = nh.advertise<nav_msgs::Odometry>("/visual_odometry",10);
 
+        image_idx = 1;
+        image_idx_max = 50;
         TestMain();
         delete tracking;
         
@@ -479,80 +485,69 @@ class TestIncrementalMotion{
 
     void TestMain(){
 
-        while(ros::ok()){
-            if(received_l && received_r){
-                // Set the time for recieving a new frame
-
-                // Undistort
-                //UndistortImages(cam_l_intrinsics,cam_r_intrinsics,cam_left.distortion_coeffs,cam_right.distortion_coeffs,image_l,image_r);
-                std::cout<<"New Frame"<<std::endl;
-                tracking->SetPredictionCallTime();
-
-                // Visual Triangulation 
-                DetectFeatures();
-                Calculate3DCoordinates();
-                received_l = false;
-                received_r = false;
-                
-                // Store the framepoints for tracking
-                std::cout<<"Framepoint Vector Size"<<std::endl;
-                std::cout<<framepoints.size()<<std::endl;
-                tracking->SetFramepointVector(framepoints);
-                framepoints.clear();
-                // Initialize a node
-                /// This step will initialize a new frame or local map.
-                tracking->img_l = image_l;
-                tracking->img_r = image_r;
-                tracking->InitializeNode();
-
-                // Perform tracking by estimating the new pose
-                Frame* current_frame;
-                
-                Eigen::Transform<float,3,2> new_pose;
-                LocalMap* lmap_ptr = tracking->map.GetLastLocalMap();
-                current_frame = lmap_ptr->GetLastFrame();
-                
-                
-                // TODO : This is a band-aid patch - not quite elegant. A better solution would be to use class variables 
-                // that keep track of current and previous frames
-                if(tracking->frame_correspondences > 0){
-                    new_pose = tracking->EstimateIncrementalMotion();
-                }
-                else{
-                    new_pose = current_frame->T_world2cam;
-                };
-                //tracking->CreateAndUpdateLandmarks(current_frame,lmap_ptr);
-
-                Eigen::AngleAxisf z_rotation = Eigen::AngleAxisf(-M_PI/2,Eigen::Vector3f::UnitZ());
-                Eigen::AngleAxisf x_rotation = Eigen::AngleAxisf(-M_PI/2,Eigen::Vector3f::UnitX());
-                Eigen::AngleAxisf y_rotation = Eigen::AngleAxisf(M_PI/2,Eigen::Vector3f::UnitY());
-                new_pose = x_rotation * new_pose;
-                new_pose = z_rotation * new_pose;
-                
-                //new_pose = new_pose * y_rotation;
-
-                PublishPose(new_pose);
-                
-                // Calculate Motion Derivative
-                if(tracking->map.local_maps[0]->frames.size() > 1){
-                    Frame* previous_frame;
-                    previous_frame = lmap_ptr->GetPreviousFrame();
-                    tracking->CalculateMotionJacobian(current_frame,previous_frame);
-                }
-            };
+        while(image_idx < image_idx_max){
+            GetCameraImages(image_idx);
+            // Undistort
+            //UndistortImages(cam_l_intrinsics,cam_r_intrinsics,cam_left.distortion_coeffs,cam_right.distortion_coeffs,image_l,image_r);
+            std::cout<<"New Frame"<<std::endl;
+            tracking->SetPredictionCallTime();
+            // Visual Triangulation 
+            DetectFeatures();
+            Calculate3DCoordinates();
+            received_l = false;
+            received_r = false;
             
+            // Store the framepoints for tracking
+            std::cout<<"Framepoint Vector Size"<<std::endl;
+            std::cout<<framepoints.size()<<std::endl;
+            tracking->SetFramepointVector(framepoints);
+            framepoints.clear();
+            // Initialize a node
+            /// This step will initialize a new frame or local map.
+            tracking->img_l = image_l;
+            tracking->img_r = image_r;
+            tracking->InitializeNode();
+            // Perform tracking by estimating the new pose
+            Frame* current_frame;
+            
+            Eigen::Transform<float,3,2> new_pose;
+            LocalMap* lmap_ptr = tracking->map.GetLastLocalMap();
+            current_frame = lmap_ptr->GetLastFrame();
+            
+            
+            // TODO : This is a band-aid patch - not quite elegant. A better solution would be to use class variables 
+            // that keep track of current and previous frames
+            if(tracking->frame_correspondences > 0){
+                new_pose = tracking->EstimateIncrementalMotion();
+            }
+            else{
+                new_pose = current_frame->T_world2cam;
+            };
+            //tracking->CreateAndUpdateLandmarks(current_frame,lmap_ptr);
+            Eigen::AngleAxisf z_rotation = Eigen::AngleAxisf(-M_PI/2,Eigen::Vector3f::UnitZ());
+            Eigen::AngleAxisf x_rotation = Eigen::AngleAxisf(-M_PI/2,Eigen::Vector3f::UnitX());
+            Eigen::AngleAxisf y_rotation = Eigen::AngleAxisf(M_PI/2,Eigen::Vector3f::UnitY());
+            new_pose = x_rotation * new_pose;
+            new_pose = z_rotation * new_pose;
+            
+            //new_pose = new_pose * y_rotation;
+            PublishPose(new_pose);
+            
+            // Calculate Motion Derivative
+            if(tracking->map.local_maps[0]->frames.size() > 1){
+                Frame* previous_frame;
+                previous_frame = lmap_ptr->GetPreviousFrame();
+                tracking->CalculateMotionJacobian(current_frame,previous_frame);
+            }
+            image_idx++;
         };
     };
 
     void DetectFeatures(){
-        if(received_l){
-                features_l.clear();
-                features_l = triangulator.DetectAndComputeFeatures(&image_l,features_l,false);
-            }
-        if(received_r){
-            features_r.clear();
-            features_r = triangulator.DetectAndComputeFeatures(&image_r,features_r,false);
-        }
+        features_l.clear();
+        features_l = triangulator.DetectAndComputeFeatures(&image_l,features_l,false);
+        features_r.clear();
+        features_r = triangulator.DetectAndComputeFeatures(&image_r,features_r,false);
         //std::cout<<"Debug : Features size"<<std::endl;
         //std::cout<<features_l.size()<<std::endl;
         return;
@@ -560,15 +555,15 @@ class TestIncrementalMotion{
 
     void Calculate3DCoordinates(){
         // Get Matches
-            matches = triangulator.GetKeypointMatches(features_l,features_r);
-            //std::cout<<"Debug : Matches size"<<std::endl;
-            //std::cout<<matches.size()<<std::endl;
-            // TODO : Put parametized arguments for baseline and fx
-            framepoints.clear();
-            triangulator.Generate3DCoordinates(matches,framepoints,0.110074,457.95,cam_left.intrinsics);
-            //std::cout<<"Debug : Framepoints size"<<std::endl;
-            //std::cout<<framepoints.size()<<std::endl;
-            return;
+        matches = triangulator.GetKeypointMatches(features_l,features_r);
+        //std::cout<<"Debug : Matches size"<<std::endl;
+        //std::cout<<matches.size()<<std::endl;
+        // TODO : Put parametized arguments for baseline and fx
+        framepoints.clear();
+        triangulator.Generate3DCoordinates(matches,framepoints,0.110074,457.95,cam_left.intrinsics);
+        //std::cout<<"Debug : Framepoints size"<<std::endl;
+        //std::cout<<framepoints.size()<<std::endl;
+        return;
     };
 
     void UndistortImages(cv::Mat cam_l_intrinsics,cv::Mat cam_r_intrinsics,std::vector<float> l_distortion,std::vector<float> r_distortion,cv::Mat& image_l,cv::Mat& image_r){
@@ -635,7 +630,7 @@ class TestPoseOptimizer{
         T_caml2camr = T_body2caml.inverse() * T_body2camr;                                
         point_sim->CreateCameras(cam_left,cam_right);
         point_sim->SetInterCameraTransform(T_caml2camr);
-        point_sim->CreateRandomPoints(1000,5);
+        point_sim->CreateRandomPoints(1000,10);
 
         // Creating camera poses
         Eigen::Transform<float,3,2> T_world2cam1,T_world2cam2;
@@ -644,11 +639,11 @@ class TestPoseOptimizer{
         T_world2cam1.translation().y() =0;
         T_world2cam1.translation().z() =-5.0; 
         T_world2cam2.setIdentity();
-        T_world2cam2.translation().x() = 0.0;
-        T_world2cam2.translation().y() = 0.0;
+        T_world2cam2.translation().x() = 0.15;
+        T_world2cam2.translation().y() = 0.15;
         T_world2cam2.translation().z() = -5.0;
         //Eigen::AngleAxis<float> z(Degrees2Radians(15),Eigen::Vector3f(0,0,1));
-        Eigen::AngleAxis<float> y(Degrees2Radians(15),Eigen::Vector3f(0,1,0));
+        Eigen::AngleAxis<float> y(Degrees2Radians(0),Eigen::Vector3f(0,1,0));
         //Eigen::AngleAxis<float> x(Degrees2Radians(3),Eigen::Vector3f(1,0,0));
         
 
@@ -852,7 +847,7 @@ int main(int argc, char **argv){
     cam_left_image_list = GetImageFilenames(fb_left);
     cam_right_image_list = GetImageFilenames(fb_right);
     
-    TestDetectFeatures test;
-
+    //TestIncrementalMotion test(nh);
+    TestPoseOptimizer test;
     return 0;
 }
