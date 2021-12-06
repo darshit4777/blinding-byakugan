@@ -146,7 +146,7 @@ class TestDetectFeatures{
 
     TestDetectFeatures(){
         image_idx = 1;
-        image_idx_max = 50;
+        image_idx_max = 10;
         TestMain();
     };
 
@@ -852,7 +852,7 @@ int main(int argc, char **argv){
     cam_left_image_list = GetImageFilenames(fb_left);
     cam_right_image_list = GetImageFilenames(fb_right);
     
-    TestGenerate3DCoordinates test(nh);
+    TestDetectFeatures test;
 
     return 0;
 }

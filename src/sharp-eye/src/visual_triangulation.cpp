@@ -11,10 +11,7 @@ VisualTriangulation::VisualTriangulation(){
         //camera_r = right;
 
         // Initializing the ORB Feature Detector
-        orb_detector = cv::ORB::create();
-
-        // Initialzing the ORB Feature Descriptor
-        orb_descriptor = cv::ORB::create();
+        orb_detector = cv::ORB::create(50);
         
         // Initializing the matcher
         
@@ -55,25 +52,36 @@ FeatureVector VisualTriangulation::DetectFeatures(cv::Mat* img_ptr,bool draw){
 };
 
 FeatureVector VisualTriangulation::DetectAndComputeFeatures(cv::Mat* img_ptr,FeatureVector &features,bool draw){
-    std::vector<cv::KeyPoint> keypoints;
-    cv::Mat descriptors;
-    orb_detector->detectAndCompute(*img_ptr,cv::noArray(),keypoints,descriptors);
+    
+    std::vector<cv::KeyPoint> image_keypoints;
+    
+    //  Mask creator for binning in feature detection
+    for(int i =0; i < 4; i++){
+        for(int j =0; j<4; j++){
+            cv::Mat mask = cv::Mat::zeros(img_ptr->size(),CV_8U);
+            cv::Mat roi(mask, cv::Rect(180*i,120*j,180,120));
+            roi = cv::Scalar(255);
+            std::vector<cv::KeyPoint> bin_keypoints;
+            cv::Mat descriptors;
+            orb_detector->detectAndCompute(*img_ptr,mask,bin_keypoints,descriptors);
+            for(int i = 0; i < bin_keypoints.size(); i++){
+                KeypointWD feature;
+                image_keypoints.push_back(bin_keypoints[i]);
+                feature.keypoint = bin_keypoints[i];
+                feature.descriptor = cv::Mat(descriptors.row(i));
+                features.push_back(feature);
+            }
+        }
+    }
 
-    if(keypoints.empty()){
+    if(features.empty()){
         std::cout<<"Warning : No keypoints detected in image"<<std::endl;
         return features;
     };
-    // Copy over the keypoints vector into the feature vector
     
-    for(int i = 0; i < keypoints.size(); i++){
-        KeypointWD feature;
-        feature.keypoint = keypoints[i];
-        feature.descriptor = cv::Mat(descriptors.row(i));
-        features.push_back(feature);
-    }
 
     if(draw){
-        cv::drawKeypoints(*img_ptr, keypoints, *img_ptr, cv::Scalar::all(-1), cv::DrawMatchesFlags::DRAW_OVER_OUTIMG);
+        cv::drawKeypoints(*img_ptr, image_keypoints, *img_ptr, cv::Scalar::all(-1), cv::DrawMatchesFlags::DRAW_OVER_OUTIMG);
     }
 
     return features;
