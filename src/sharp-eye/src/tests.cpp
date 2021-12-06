@@ -111,8 +111,9 @@ void GetCameraImages(int image_idx){
     image_l = cv::imread(image_path_left);
     image_r = cv::imread(image_path_right);
 
-    cv::imshow(OPENCV_WINDOW_LEFT,image_l);
-    cv::waitKey(3);
+    //cv::imshow(OPENCV_WINDOW_LEFT,image_l);
+    //cv::waitKey(0);
+
     return;
 }
 
@@ -145,8 +146,8 @@ class TestDetectFeatures{
     };
 
     TestDetectFeatures(){
-        image_idx = 1;
-        image_idx_max = 10;
+        image_idx = 1980;
+        image_idx_max = 2000;
         TestMain();
     };
 
@@ -188,7 +189,9 @@ class TestGetMatchedKeypoints{
             cv::imshow(OPENCV_WINDOW_LEFT,image_l);
             cv::waitKey(5);
             cv::imshow(OPENCV_WINDOW_RIGHT,image_r);
-            cv::waitKey(5);   
+            cv::waitKey(5);
+
+            
 
             image_idx++;
             
@@ -326,6 +329,8 @@ class TestFindCorrespondences{
     Camera cam_left;
     Camera cam_right;
     std::vector<Frame> frames;
+    int image_idx;
+    int image_idx_max;
     TestFindCorrespondences(){
         // Initializing Camera Matrices
         cam_left.intrinsics << 458.654,     0.0,    367.215,
@@ -336,6 +341,8 @@ class TestFindCorrespondences{
                                     0.0,    456.134, 255.238,
                                     0.05,        0.0,    1.0;                               
 
+        image_idx = 1980;
+        image_idx_max = 2000;
         TestMain();
     };
 
@@ -345,43 +352,63 @@ class TestFindCorrespondences{
         std::vector<KeypointWD> features_l;
         std::vector<KeypointWD> features_r;
 
-        while(ros::ok()){
-            ros::spinOnce();
-            if(received_l){
-                features_l.clear();
-                features_l = triangulator.DetectAndComputeFeatures(&image_l,features_l,false);
-            }
-            if(received_r){
-                features_r.clear();
-                features_r = triangulator.DetectAndComputeFeatures(&image_r,features_r,false);
-            }
-            if(received_l && received_r){
-                // Get Matches
-                MatchVector matches = triangulator.GetKeypointMatches(features_l,features_r);
+        while(image_idx < image_idx_max){
+            GetCameraImages(image_idx);
+            features_l.clear();
+            features_l = triangulator.DetectAndComputeFeatures(&image_l,features_l,false);
+            
+            features_r.clear();
+            features_r = triangulator.DetectAndComputeFeatures(&image_r,features_r,false);
 
-                FramepointVector framepoints;
-                triangulator.Generate3DCoordinates(matches,framepoints,0.11,457.95,cam_left.intrinsics);
-                Frame current_frame;
-                std::vector<boost::shared_ptr<Framepoint>> framepoint_ptr_vector;
-                for(int i =0; i < framepoints.size(); i++){
-                    boost::shared_ptr<Framepoint> framepoint_ptr; 
-                    framepoint_ptr = boost::make_shared<Framepoint>(framepoints[i]);
-                    framepoint_ptr_vector.push_back(framepoint_ptr);
-                }
-                current_frame.points = framepoint_ptr_vector;
-                frames.push_back(current_frame);
-                current_frame.points.clear();
-                if(frames.size() > 1){
-                    // Skip the first frame, from the second frame onwards..
-                    int previous_index = frames.size() - 2;
-                    int current_index = frames.size() - 1;
-                    int correspondences;
-                    correspondences = tracking.FindCorrespondences(frames[previous_index].points,frames[current_index].points);
-                    std::cout<<correspondences<<std::endl;
+            
+            // Get Matches
+            MatchVector matches = triangulator.GetKeypointMatches(features_l,features_r);
 
+            FramepointVector framepoints;
+            triangulator.Generate3DCoordinates(matches,framepoints,0.11,457.95,cam_left.intrinsics);
+            Frame current_frame;
+            std::vector<boost::shared_ptr<Framepoint>> framepoint_ptr_vector;
+            for(int i =0; i < framepoints.size(); i++){
+                boost::shared_ptr<Framepoint> framepoint_ptr; 
+                framepoint_ptr = boost::make_shared<Framepoint>(framepoints[i]);
+                framepoint_ptr_vector.push_back(framepoint_ptr);
+            }
+            current_frame.points = framepoint_ptr_vector;
+            current_frame.image_l = image_l;
+            frames.push_back(current_frame);
+            current_frame.points.clear();
+            if(frames.size() > 1){
+                // Skip the first frame, from the second frame onwards..
+                int previous_index = frames.size() - 2;
+                int current_index = frames.size() - 1;
+                int correspondences;
+                correspondences = tracking.FindCorrespondences(frames[previous_index].points,frames[current_index].points);
+                // Drawing the correspondences on a compound image
+                cv::Mat joined_image;
+                
+                cv::hconcat(frames[previous_index].image_l,frames[current_index].image_l,joined_image);
+                //std::cout<<joined_image.channels()<<std::endl;
+                //cv::Mat joined_image_color(joined_image.size(),CV_8UC3);
+                //cv::cvtColor(joined_image,joined_image_color,CV_GRAY2BGR);
+                for(auto point : frames[current_index].points){
+                    if(point->previous != NULL){
+                        // A correspondence exists
+                        cv::Point2f previous_frame_point;
+                        cv::Point2f current_frame_point;
+
+                        previous_frame_point = point->previous->keypoint_l.keypoint.pt;
+                        current_frame_point = point->keypoint_l.keypoint.pt;
+                        current_frame_point.x += frames[previous_index].image_l.cols;
+
+                        cv::line(joined_image,previous_frame_point,current_frame_point,(0,0,255),1);
+                    } 
                 }
                 
-            };
+                cv::imshow(OPENCV_WINDOW_LEFT,joined_image);
+                cv::waitKey(0);
+            }
+                
+            image_idx++;
         };
     };  
 };
@@ -475,8 +502,8 @@ class TestIncrementalMotion{
         nodehandle = nh;
         pose_publisher = nh.advertise<nav_msgs::Odometry>("/visual_odometry",10);
 
-        image_idx = 1;
-        image_idx_max = 50;
+        image_idx = 1980;
+        image_idx_max = 2000;
         TestMain();
         delete tracking;
         
@@ -524,11 +551,11 @@ class TestIncrementalMotion{
                 new_pose = current_frame->T_world2cam;
             };
             //tracking->CreateAndUpdateLandmarks(current_frame,lmap_ptr);
-            Eigen::AngleAxisf z_rotation = Eigen::AngleAxisf(-M_PI/2,Eigen::Vector3f::UnitZ());
-            Eigen::AngleAxisf x_rotation = Eigen::AngleAxisf(-M_PI/2,Eigen::Vector3f::UnitX());
-            Eigen::AngleAxisf y_rotation = Eigen::AngleAxisf(M_PI/2,Eigen::Vector3f::UnitY());
-            new_pose = x_rotation * new_pose;
-            new_pose = z_rotation * new_pose;
+            //Eigen::AngleAxisf z_rotation = Eigen::AngleAxisf(-M_PI/2,Eigen::Vector3f::UnitZ());
+            //Eigen::AngleAxisf x_rotation = Eigen::AngleAxisf(-M_PI/2,Eigen::Vector3f::UnitX());
+            //Eigen::AngleAxisf y_rotation = Eigen::AngleAxisf(M_PI/2,Eigen::Vector3f::UnitY());
+            //new_pose = x_rotation * new_pose;
+            //new_pose = z_rotation * new_pose;
             
             //new_pose = new_pose * y_rotation;
             PublishPose(new_pose);
@@ -848,6 +875,8 @@ int main(int argc, char **argv){
     cam_right_image_list = GetImageFilenames(fb_right);
     
     //TestIncrementalMotion test(nh);
-    TestPoseOptimizer test;
+    //TestPoseOptimizer test;
+    //TestDetectFeatures test;
+    TestFindCorrespondences test;
     return 0;
 }

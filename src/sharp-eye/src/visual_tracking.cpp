@@ -569,6 +569,7 @@ void VisualTracking::InitializeNode(){
         
         int correspondences;
         correspondences = FindCorrespondences(prev_frame_ptr->points,frame_ptr->points);
+        
         if(correspondences == 0){
             // The track is broken. We must initialize a new local map
             std::cout<<"No correspondences found, creating new local map and new Frame"<<std::endl;

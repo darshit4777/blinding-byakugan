@@ -14,7 +14,7 @@ PoseOptimizer::PoseOptimizer(){
     parameters.minimum_depth = 0.1;
     parameters.maximum_depth = 10.0;
     parameters.maximum_reliable_depth = 10.0;
-    parameters.kernel_maximum_error = 10;
+    parameters.kernel_maximum_error = 200;
     parameters.solver_maximum_error = 10;
     parameters.max_iterations = 100;
 
@@ -226,7 +226,6 @@ void PoseOptimizer::Linearize(Framepoint* fp){
         return;
     };
     float error_squared = reproj_error.transpose() * reproj_error;
-    std::cout<<error_squared<<std::endl;
     if(error_squared > parameters.kernel_maximum_error){
         if(parameters.ignore_outliers){
             return;
@@ -425,7 +424,6 @@ void PoseOptimizer::OptimizeOnce(){
         ComputeError(fp_ptr);
         Linearize(fp_ptr);
     };
-    std::cout<<"Inliers "<<inliers<<std::endl;
     Solve();
     return;
 }
@@ -439,7 +437,6 @@ void PoseOptimizer::Converge(){
     //TODO : This needs work
         OptimizeOnce();    
         std::cout<<"No of inliers are "<<inliers<<std::endl;
-        cv::waitKey(0);
         if(inliers < parameters.min_inliers){
             parameters.ignore_outliers = false;
         }

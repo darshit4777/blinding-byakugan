@@ -11,7 +11,7 @@ VisualTriangulation::VisualTriangulation(){
         //camera_r = right;
 
         // Initializing the ORB Feature Detector
-        orb_detector = cv::ORB::create(50);
+        orb_detector = cv::ORB::create(10);
         
         // Initializing the matcher
         
