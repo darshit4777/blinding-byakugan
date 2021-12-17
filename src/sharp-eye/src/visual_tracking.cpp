@@ -261,6 +261,8 @@ Eigen::Transform<float,3,2> VisualTracking::EstimateIncrementalMotion(){
     Frame* previous_frame_ptr = lmap_ptr->GetPreviousFrame();
     Frame* current_frame_ptr = lmap_ptr->GetLastFrame();
     optimizer->Initialize(current_frame_ptr,previous_frame_ptr,lmap_ptr);
+    // optimizer->RANSACInitialize();
+    // optimizer->RANSACConverge();
     optimizer->OptimizeOnce();
     optimizer->Converge();
 

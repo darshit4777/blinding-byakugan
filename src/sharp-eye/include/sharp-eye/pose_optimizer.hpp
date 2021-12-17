@@ -32,7 +32,20 @@ class PoseOptimizer{
         // Inter camera transform
         Eigen::Transform<float,3,2> T_caml2camr;
 
+
     } parameters;
+
+    struct ransac_parameters{
+        int n; //< No of datapoints
+        int p; //< probability of success 
+        int e; //< Ratio of outliers to datapoints
+        int s; //< Min no of points
+        int t; //< No of trials
+
+        int max_inliers;
+        std::vector<int> valid_point_indices;
+        std::vector<int> inlier_vector_indices;
+    } ransac_params;
 
     // Error
     float iteration_error;
@@ -86,10 +99,11 @@ class PoseOptimizer{
     void Initialize(Frame* curr_frame_ptr,Frame* prev_frame_ptr,LocalMap* local_map_ptr);
 
     /**
-     * @brief Runs the optimization loop once
+     * @brief Runs the optimization loop once.
      * 
+     * @param frame_ptr //< The frame on which optimization is to be run
      */
-    void OptimizeOnce();
+    void OptimizeOnce(Frame* frame_ptr);
 
     /**
      * @brief Uses the optimize once along with convergence conditions
@@ -131,7 +145,7 @@ class PoseOptimizer{
      * checks for invalid points and then computes the reprojection error
      * 
      */
-    void ComputeError(Framepoint* fp);
+    float ComputeError(Framepoint* fp,bool check_landmark = true);
     
     /**
      * @brief Assembles the H, b and omega matrices
@@ -152,8 +166,53 @@ class PoseOptimizer{
      */
     void Update();
 
+    /**
+     * @brief Checks if the vector has an "inf"
+     * 
+     * @param vec 
+     * @return true 
+     * @return false 
+     */
     bool HasInf(Eigen::Vector3f vec);
 
+    /**
+     * @brief Calculates the jacobian matrix
+     * 
+     * @param left_cam_coordinates 
+     * @param right_cam_coordinates 
+     * @param camera_l 
+     * @param camera_r 
+     * @param omega 
+     * @return Eigen::Matrix<float,4,6> 
+     */
     Eigen::Matrix<float,4,6> FindJacobian(Eigen::Vector3f& left_cam_coordinates,Eigen::Vector3f& right_cam_coordinates,Camera& camera_l,Camera& camera_r,float omega);
+
+    /**
+     * @brief Initializes RANSAC 
+     * 
+     * @param current_frame_ptr 
+     * @param p //< the probability of success of finding a single set with no outliers. Default 0.99.
+     * @param e //< the ratio of outliers to datapoints. Default 0.1.
+     * @param s //< the minimum number of points required to define a model. Default 3. 
+     */
+    void InitializeRANSAC(Frame* current_frame_ptr, int p = 0.99, int e = 0.1, int s = 3);
+
+    /**
+     * @brief Chooses a random subset of points, computes a model and inliers
+     * for the model.  
+     * 
+     * @return returns the number of inliers obtained
+     */
+
+    int RANSACIterateOnce();
+
+    /**
+     * @brief Perform a single RANSAC iteration T times. Where T is the number 
+     * of trials calculated during initialization. 
+     * 
+     */
+    void RANSACConverge();
+
+    
 
 };
