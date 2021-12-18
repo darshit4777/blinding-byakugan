@@ -261,8 +261,7 @@ Eigen::Transform<float,3,2> VisualTracking::EstimateIncrementalMotion(){
     Frame* previous_frame_ptr = lmap_ptr->GetPreviousFrame();
     Frame* current_frame_ptr = lmap_ptr->GetLastFrame();
     optimizer->Initialize(current_frame_ptr,previous_frame_ptr,lmap_ptr);
-    // optimizer->RANSACInitialize();
-    // optimizer->RANSACConverge();
+    std::cout<<optimizer->measurements<<" datapoints were found for incremental motion estimation"<<std::endl;
     optimizer->OptimizeOnce(current_frame_ptr);
     optimizer->Converge();
 
@@ -276,9 +275,9 @@ void VisualTracking::RANSACOutlierRejection(){
     Frame* previous_frame_ptr = lmap_ptr->GetPreviousFrame();
     Frame* current_frame_ptr = lmap_ptr->GetLastFrame();
     optimizer->InitializeRANSAC(current_frame_ptr);
-
-    int inliers = optimizer->RANSACIterateOnce();
-    std::cout<<"Inliers "<<std::endl;
+    std::cout<<optimizer->ransac_params.n<<" datapoints were found for outlier rejection"<<std::endl;
+    optimizer->RANSACConverge();
+    optimizer->RANSACUpdateFrame();
     return;
 };
 

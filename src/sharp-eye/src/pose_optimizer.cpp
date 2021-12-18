@@ -582,6 +582,7 @@ void PoseOptimizer::InitializeRANSAC(Frame *current_frame_ptr, float p , float e
     ransac_params.max_inliers = 0;
     ransac_params.valid_point_indices.clear();
     ransac_params.inlier_vector_indices.clear();
+    ransac_params.optimal_transform.setIdentity();
 
     // Assign the frame pointer
     this->current_frame_ptr = current_frame_ptr;
@@ -672,5 +673,47 @@ int PoseOptimizer::RANSACIterateOnce()
         }
     }
 
+    if(inliers > ransac_params.max_inliers){
+        ransac_params.max_inliers = inliers;
+        ransac_params.optimal_transform = T_prev2curr;
+    };
+
     return inliers;
+};
+
+void PoseOptimizer::RANSACConverge(){
+
+    for(int i = 0; i<ransac_params.t; i++){
+        int inliers = RANSACIterateOnce();
+        std::cout<<"Inliers "<<inliers<<std::endl;
+    };
+
+    std::cout<<"Optimal model"<<std::endl;
+    std::cout<<ransac_params.optimal_transform.matrix()<<std::endl;
+};
+
+void PoseOptimizer::RANSACUpdateFrame(){
+    
+    // Removing outliers from the valid points
+
+    // It's not necessary to delete points which are outliers - since them being an
+    // outlier is a result of a bad correspondence matching. We can simply remove
+    // their correspondence match.
+    int rejections = 0;
+    for (int i = 0; i < ransac_params.n; i++)
+    {
+        int frame_ptr_index = ransac_params.valid_point_indices[i];
+        Framepoint* fp;
+        fp = current_frame_ptr->points[frame_ptr_index].get();
+        // Now compute the reprojection error
+        float error = ComputeError(fp);
+
+        if(error > 10){
+            fp->previous = NULL;
+            rejections++;
+        }
+    }
+    std::cout<<rejections<<" points were rejected"<<std::endl;
+
+    return;
 };

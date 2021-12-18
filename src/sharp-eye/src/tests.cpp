@@ -503,7 +503,7 @@ class TestIncrementalMotion{
         pose_publisher = nh.advertise<nav_msgs::Odometry>("/visual_odometry",10);
 
         image_idx = 1980;
-        image_idx_max = 2000;
+        image_idx_max = 1990;
         TestMain();
         delete tracking;
         

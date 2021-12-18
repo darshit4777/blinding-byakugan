@@ -45,6 +45,8 @@ class PoseOptimizer{
         int max_inliers;
         std::vector<int> valid_point_indices;
         std::vector<int> inlier_vector_indices;
+        Eigen::Transform<float,3,2> optimal_transform;
+
     } ransac_params;
 
     // Error
@@ -214,6 +216,13 @@ class PoseOptimizer{
      * 
      */
     void RANSACConverge();
+
+    /**
+     * @brief Finds all the outliers based on the optimal model and removes them
+     * from the current frame pointer. 
+     * 
+     */
+    void RANSACUpdateFrame();
 
     
 
