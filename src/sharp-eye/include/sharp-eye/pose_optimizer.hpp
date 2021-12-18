@@ -37,8 +37,8 @@ class PoseOptimizer{
 
     struct ransac_parameters{
         int n; //< No of datapoints
-        int p; //< probability of success 
-        int e; //< Ratio of outliers to datapoints
+        float p; //< probability of success 
+        float e; //< Ratio of outliers to datapoints
         int s; //< Min no of points
         int t; //< No of trials
 
@@ -195,7 +195,9 @@ class PoseOptimizer{
      * @param e //< the ratio of outliers to datapoints. Default 0.1.
      * @param s //< the minimum number of points required to define a model. Default 3. 
      */
-    void InitializeRANSAC(Frame* current_frame_ptr, int p = 0.99, int e = 0.1, int s = 3);
+
+    public:
+    void InitializeRANSAC(Frame* current_frame_ptr, float p = 0.99, float e = 0.1, int s = 3);
 
     /**
      * @brief Chooses a random subset of points, computes a model and inliers

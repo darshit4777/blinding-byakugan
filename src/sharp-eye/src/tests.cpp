@@ -545,6 +545,8 @@ class TestIncrementalMotion{
             // TODO : This is a band-aid patch - not quite elegant. A better solution would be to use class variables 
             // that keep track of current and previous frames
             if(tracking->frame_correspondences > 0){
+                // Before generating new pose, we execute RANSAC
+                tracking->RANSACOutlierRejection();
                 new_pose = tracking->EstimateIncrementalMotion();
             }
             else{
@@ -853,7 +855,6 @@ class TestSharedPointers{
     };
 };
 
-
 int main(int argc, char **argv){
     ros::init(argc,argv,"image_listener");
     ros::NodeHandle nh;
@@ -874,9 +875,9 @@ int main(int argc, char **argv){
     cam_left_image_list = GetImageFilenames(fb_left);
     cam_right_image_list = GetImageFilenames(fb_right);
     
-    //TestIncrementalMotion test(nh);
+    TestIncrementalMotion test(nh);
     //TestPoseOptimizer test;
     //TestDetectFeatures test;
-    TestFindCorrespondences test;
+    //TestFindCorrespondences test;
     return 0;
 }

@@ -263,10 +263,23 @@ Eigen::Transform<float,3,2> VisualTracking::EstimateIncrementalMotion(){
     optimizer->Initialize(current_frame_ptr,previous_frame_ptr,lmap_ptr);
     // optimizer->RANSACInitialize();
     // optimizer->RANSACConverge();
-    optimizer->OptimizeOnce();
+    optimizer->OptimizeOnce(current_frame_ptr);
     optimizer->Converge();
 
     return current_frame_ptr->T_world2cam;
+};
+
+void VisualTracking::RANSACOutlierRejection(){
+    optimizer->parameters.T_caml2camr = T_caml2camr;
+     
+    LocalMap* lmap_ptr = map.GetLastLocalMap();
+    Frame* previous_frame_ptr = lmap_ptr->GetPreviousFrame();
+    Frame* current_frame_ptr = lmap_ptr->GetLastFrame();
+    optimizer->InitializeRANSAC(current_frame_ptr);
+
+    int inliers = optimizer->RANSACIterateOnce();
+    std::cout<<"Inliers "<<std::endl;
+    return;
 };
 
 void VisualTracking::CreateAndUpdateLandmarks(Frame* current_frame_ptr,LocalMap* lmap_ptr){

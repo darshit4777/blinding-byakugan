@@ -90,7 +90,7 @@ void PoseOptimizer::Initialize(Frame *curr_frame_ptr, Frame *prev_frame_ptr, Loc
     return;
 };
 
-float PoseOptimizer::ComputeError(Framepoint *fp, bool check_landmark = true)
+float PoseOptimizer::ComputeError(Framepoint *fp, bool check_landmark)
 {
     /**
      * @brief Transforms the camera coordinates of points from the previous frame
@@ -102,7 +102,7 @@ float PoseOptimizer::ComputeError(Framepoint *fp, bool check_landmark = true)
     if (fp->previous == NULL)
     {
         compute_success = false;
-        return;
+        return -1.0;
     }
 
     //std::vector<Framepoint> fp_1,fp_2;
@@ -131,13 +131,13 @@ float PoseOptimizer::ComputeError(Framepoint *fp, bool check_landmark = true)
     {
         std::cout << "Invalid  Camera Points - INF" << std::endl;
         compute_success = false;
-        return;
+        return -1.0;
     }
     if (p_caml.hasNaN() || p_camr.hasNaN())
     {
         std::cout << "Invalid  Camera Points - NaN" << std::endl;
         compute_success = false;
-        return;
+        return -1.0;
     };
 
     // Now we project the points from the previous frame into pixel coordinates
@@ -154,27 +154,27 @@ float PoseOptimizer::ComputeError(Framepoint *fp, bool check_landmark = true)
     {
         std::cout << "Invalid pixels - NaN" << std::endl;
         compute_success = false;
-        return;
+        return -1.0;
     };
     if (rcam_pixels[0] < 0 || rcam_pixels[1] < 0)
     {
         compute_success = false;
-        return;
+        return -1.0;
     };
     if (lcam_pixels[0] < 0 || lcam_pixels[1] < 0)
     {
         compute_success = false;
-        return;
+        return -1.0;
     };
     if (lcam_pixels[0] > 720 || lcam_pixels[1] > 480)
     {
         compute_success = false;
-        return;
+        return -1.0;
     };
     if (rcam_pixels[0] > 720 || rcam_pixels[1] > 480)
     {
         compute_success = false;
-        return;
+        return -1.0;
     };
 
     // Calculating Reprojection Error - Order is important - (Sampled-Fixed)
@@ -572,7 +572,7 @@ void PoseOptimizer::VisualizeFramepointComparision(FramepointVector fp_vec1, cv:
     return;
 };
 
-void PoseOptimizer::InitializeRANSAC(Frame *current_frame_ptr, int p = 0.99, int e = 0.1, int s = 3)
+void PoseOptimizer::InitializeRANSAC(Frame *current_frame_ptr, float p , float e , int s )
 {
     // Initialize RANSAC params
     ransac_params.e = e;
@@ -582,8 +582,11 @@ void PoseOptimizer::InitializeRANSAC(Frame *current_frame_ptr, int p = 0.99, int
     ransac_params.max_inliers = 0;
     ransac_params.valid_point_indices.clear();
     ransac_params.inlier_vector_indices.clear();
+
+    // Assign the frame pointer
+    this->current_frame_ptr = current_frame_ptr;
     // Number of datapoints
-    ransac_params.n = current_frame_ptr->points.size();
+    ransac_params.n = 0;
     for (int i = 0; i < current_frame_ptr->points.size(); i++)
     {
         // TODO : Fix this statement - too shabby
@@ -669,5 +672,5 @@ int PoseOptimizer::RANSACIterateOnce()
         }
     }
 
-    return inliers
-}
+    return inliers;
+};
