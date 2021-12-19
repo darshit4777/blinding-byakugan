@@ -15,7 +15,7 @@ PoseOptimizer::PoseOptimizer()
     parameters.minimum_depth = 0.1;
     parameters.maximum_depth = 10.0;
     parameters.maximum_reliable_depth = 10.0;
-    parameters.kernel_maximum_error = 200;
+    parameters.kernel_maximum_error = 20;
     parameters.solver_maximum_error = 10;
     parameters.max_iterations = 100;
 

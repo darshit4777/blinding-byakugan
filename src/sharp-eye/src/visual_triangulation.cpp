@@ -11,7 +11,7 @@ VisualTriangulation::VisualTriangulation(){
         //camera_r = right;
 
         // Initializing the ORB Feature Detector
-        orb_detector = cv::ORB::create(10);
+        orb_detector = cv::ORB::create(20);
         
         // Initializing the matcher
         
@@ -54,12 +54,14 @@ FeatureVector VisualTriangulation::DetectFeatures(cv::Mat* img_ptr,bool draw){
 FeatureVector VisualTriangulation::DetectAndComputeFeatures(cv::Mat* img_ptr,FeatureVector &features,bool draw){
     
     std::vector<cv::KeyPoint> image_keypoints;
-    
+    int horizontal_split = 12;
+    int vertical_split = 4;
+
     //  Mask creator for binning in feature detection
-    for(int i =0; i < 6; i++){
-        for(int j =0; j<4; j++){
+    for(int i =0; i < horizontal_split; i++){
+        for(int j =0; j<vertical_split; j++){
             cv::Mat mask = cv::Mat::zeros(img_ptr->size(),CV_8U);
-            cv::Mat roi(mask, cv::Rect(120*i,120*j,120,120));
+            cv::Mat roi(mask, cv::Rect((720/horizontal_split)*i,(480/vertical_split)*j,720/horizontal_split,480/vertical_split));
             roi = cv::Scalar(255);
             std::vector<cv::KeyPoint> bin_keypoints;
             cv::Mat descriptors;

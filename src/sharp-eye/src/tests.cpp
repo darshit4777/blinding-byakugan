@@ -544,8 +544,8 @@ class TestFixtureVisualTracking{
         nodehandle = nh;
         pose_publisher = nh.advertise<nav_msgs::Odometry>("/visual_odometry",10);
 
-        image_idx = 1980;
-        image_idx_max = 1990;
+        image_idx = 1000;
+        image_idx_max = 1010;
     };
 
     void Calculate3DCoordinates(){
@@ -578,9 +578,9 @@ class TestFixtureVisualTracking{
 
     void DetectFeatures(){
         features_l.clear();
-        features_l = triangulator.DetectAndComputeFeatures(&image_l,features_l,false);
+        features_l = triangulator.DetectAndComputeFeatures(&undistorted_l,features_l,false);
         features_r.clear();
-        features_r = triangulator.DetectAndComputeFeatures(&image_r,features_r,false);
+        features_r = triangulator.DetectAndComputeFeatures(&undistorted_r,features_r,false);
         return;
     };
 
@@ -906,6 +906,8 @@ int main(int argc, char **argv){
     
     cam_left_image_list = GetImageFilenames(fb_left);
     cam_right_image_list = GetImageFilenames(fb_right);
+
+    LoadCameras();
     
     TestIncrementalMotion test(nh);
     //TestPoseOptimizer test;
