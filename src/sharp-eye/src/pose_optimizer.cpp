@@ -620,30 +620,12 @@ void PoseOptimizer::InitializeRANSAC(Frame *current_frame_ptr, float p , float e
 int PoseOptimizer::RANSACIterateOnce()
 {
     Frame random_frame;
-    std::vector<int> random_indices;
-
-    srand(time(NULL)); //< Initializing random seed
-
-    // Selecting 3 random indices
-    for (int i = 0; i < 3; i++)
-    {
-        int random_index = rand() % ransac_params.t;
-
-        // Check for duplicates.
-        if (!random_indices.empty())
-        {
-            while (std::count(random_indices.begin(), random_indices.end(), random_index))
-            {
-                random_index = rand() & ransac_params.n;
-            };
-        };
-
-        random_indices.push_back(random_index);
-    };
-
-    // Creating vector of randomly selected valid points
-    for (int i = 0; i < 3; i++)
-    {
+    Eigen::Vector3i random_indices;
+    random_indices.setRandom();
+    random_indices = random_indices / INT16_MAX;
+    
+    for(int i = 0; i < 3; i++){
+        random_indices[i] = abs(random_indices[i] * ransac_params.n);
         int frame_ptr_index = ransac_params.valid_point_indices[random_indices[i]];
         random_frame.points.push_back(current_frame_ptr->points[frame_ptr_index]);
     };
@@ -655,11 +637,35 @@ int PoseOptimizer::RANSACIterateOnce()
     random_frame.T_world2cam = current_frame_ptr->T_world2cam;
 
     // Passing the frame to OptimizeOnce
-    OptimizeOnce(&random_frame); // Set the H matrix and b vector.
-    Solve();                     // Solve for a new T_prev2curr
+    // We create convergence and solving criteria here
+    float previous_error = 0;
+    float error_delta = 0;
+    for (int i = 0; i < parameters.max_iterations; i++)
+    {
+        //TODO : This needs work
+        OptimizeOnce(&random_frame);
+        std::cout << "No of inliers are " << inliers << std::endl;
+        if (inliers < parameters.min_inliers)
+        {
+            parameters.ignore_outliers = false;
+        }
+        else
+        {
+            parameters.ignore_outliers = true;
+        }
 
-    // Checking the number of inliers with this model
-    int inliers = 0;
+        error_delta = fabs(iteration_error - previous_error);
+        previous_error = iteration_error;
+
+        if ((error_delta < 1e-5) && (iteration_error < parameters.solver_maximum_error))
+        {
+            std::cout << "Converged after " << i << " iterations" << std::endl;
+            break;
+        }
+    };
+
+    // Checking the number of ransac inliers with this model
+    int ransac_inliers;
     for (int i = 0; i < ransac_params.n; i++)
     {
         int frame_ptr_index = ransac_params.valid_point_indices[i];
@@ -669,23 +675,23 @@ int PoseOptimizer::RANSACIterateOnce()
         float error = ComputeError(fp);
 
         if(error < 10){
-            inliers++;
+            ransac_inliers++;
         }
     }
 
-    if(inliers > ransac_params.max_inliers){
-        ransac_params.max_inliers = inliers;
+    if(ransac_inliers > ransac_params.max_inliers){
+        ransac_params.max_inliers = ransac_inliers;
         ransac_params.optimal_transform = T_prev2curr;
     };
 
-    return inliers;
+    return ransac_inliers;
 };
 
 void PoseOptimizer::RANSACConverge(){
 
     for(int i = 0; i<ransac_params.t; i++){
-        int inliers = RANSACIterateOnce();
-        std::cout<<"Inliers "<<inliers<<std::endl;
+        int ransac_inliers = RANSACIterateOnce();
+        std::cout<<"Inliers "<<ransac_inliers<<std::endl;
     };
 
     std::cout<<"Optimal model"<<std::endl;

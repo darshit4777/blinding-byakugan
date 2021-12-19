@@ -1,6 +1,7 @@
 #include <ros/ros.h>
 #include <image_transport/image_transport.h>
 #include <opencv2/highgui/highgui.hpp>
+#include <opencv2/calib3d.hpp>
 #include <cv_bridge/cv_bridge.h>
 #include <boost/bind.hpp>
 #include <sharp-eye/visual_triangulation.hpp>
@@ -425,6 +426,8 @@ class TestIncrementalMotion{
 
     cv::Mat cam_l_intrinsics;
     cv::Mat cam_r_intrinsics;
+    cv::Mat cam_l_distortion = cv::Mat(4,1, cv::DataType<float>::type);
+    cv::Mat cam_r_distortion = cv::Mat(4,1, cv::DataType<float>::type);
 
     // Triangulation
     VisualTriangulation triangulator;
@@ -454,6 +457,7 @@ class TestIncrementalMotion{
         cam_left.distortion_coeffs.push_back(0.07395907);
         cam_left.distortion_coeffs.push_back(0.00019359);
         cam_left.distortion_coeffs.push_back(1.76187114e-05);
+        
 
         cam_right.intrinsics << 457.587,        0.0, 379.999,
                                     0.0,    456.134, 255.238,
@@ -474,6 +478,11 @@ class TestIncrementalMotion{
         cam_l_intrinsics.at<float>(2,0) = cam_left.intrinsics(2,0);
         cam_l_intrinsics.at<float>(2,1) = cam_left.intrinsics(2,1);
         cam_l_intrinsics.at<float>(2,2) = cam_left.intrinsics(2,2);
+        std::cout<<cam_left.distortion_coeffs[0]<<std::endl;
+        cam_l_distortion.at<float>(0,0) = cam_left.distortion_coeffs[0];
+        cam_l_distortion.at<float>(1,0) = cam_left.distortion_coeffs[1];
+        cam_l_distortion.at<float>(2,0) = cam_left.distortion_coeffs[2];
+        cam_l_distortion.at<float>(3,0) = cam_left.distortion_coeffs[3];
 
         cam_r_intrinsics = cv::Mat(3,3,cv::DataType<float>::type);
         cam_r_intrinsics.at<float>(0,0) = cam_right.intrinsics(0,0);
@@ -484,7 +493,12 @@ class TestIncrementalMotion{
         cam_r_intrinsics.at<float>(1,2) = cam_right.intrinsics(1,2);
         cam_r_intrinsics.at<float>(2,0) = cam_right.intrinsics(2,0);
         cam_r_intrinsics.at<float>(2,1) = cam_right.intrinsics(2,1);
-        cam_r_intrinsics.at<float>(2,2) = cam_right.intrinsics(2,2);                                    
+        cam_r_intrinsics.at<float>(2,2) = cam_right.intrinsics(2,2);    
+
+        cam_r_distortion.at<float>(0,0) = cam_right.distortion_coeffs[0];
+        cam_r_distortion.at<float>(1,0) = cam_right.distortion_coeffs[1];
+        cam_r_distortion.at<float>(2,0) = cam_right.distortion_coeffs[2];
+        cam_r_distortion.at<float>(3,0) = cam_right.distortion_coeffs[3];                                
 
         T_body2caml.matrix()<<   0.0148655429818, -0.999880929698, 0.00414029679422, -0.0216401454975,
                                     0.999557249008, 0.0149672133247, 0.025715529948, -0.064676986768,
@@ -515,7 +529,13 @@ class TestIncrementalMotion{
         while(image_idx < image_idx_max){
             GetCameraImages(image_idx);
             // Undistort
-            //UndistortImages(cam_l_intrinsics,cam_r_intrinsics,cam_left.distortion_coeffs,cam_right.distortion_coeffs,image_l,image_r);
+            UndistortImages(cam_l_intrinsics,cam_r_intrinsics,cam_l_distortion,cam_r_distortion,image_l,image_r);
+            //cv::Mat combinedImage;
+            //cv::hconcat(image_l,undistorted_l,combinedImage);
+            //cv::imshow(OPENCV_WINDOW_LEFT,combinedImage);
+            //cv::waitKey(0);
+            
+            
             std::cout<<"New Frame"<<std::endl;
             tracking->SetPredictionCallTime();
             // Visual Triangulation 
@@ -595,10 +615,26 @@ class TestIncrementalMotion{
         return;
     };
 
-    void UndistortImages(cv::Mat cam_l_intrinsics,cv::Mat cam_r_intrinsics,std::vector<float> l_distortion,std::vector<float> r_distortion,cv::Mat& image_l,cv::Mat& image_r){
+    void UndistortImages(cv::Mat cam_l_intrinsics,cv::Mat cam_r_intrinsics,cv::Mat l_distortion,cv::Mat r_distortion,cv::Mat& image_l,cv::Mat& image_r){
+        
+        cv::Mat mapl1, mapl2;
+        cv::Mat mapr1, mapr2;
 
-        cv::undistort(image_l,undistorted_l,cam_l_intrinsics,l_distortion);
-        cv::undistort(image_r,undistorted_r,cam_r_intrinsics,r_distortion);
+    
+        cv::fisheye::initUndistortRectifyMap(cam_l_intrinsics, l_distortion, cv::Matx33d::eye(), cam_l_intrinsics, image_l.size(), CV_32FC1, mapl1, mapl2);
+        cv::fisheye::initUndistortRectifyMap(cam_r_intrinsics, r_distortion, cv::Matx33d::eye(), cam_r_intrinsics, image_r.size(), CV_32FC1, mapr1, mapr2);
+
+        //fisheye::undistortImage(frame, output, K, D, identity);
+
+        cv::remap(image_l, undistorted_l, mapl1, mapl2, cv::INTER_CUBIC);
+        cv::remap(image_r, undistorted_r, mapr1, mapr2, cv::INTER_CUBIC);
+        //cv::fisheye::undistortImage(image_l,undistorted_l,cam_l_intrinsics,l_distortion);
+        //cv::fisheye::undistortImage(image_r,undistorted_r,cam_r_intrinsics,r_distortion);
+        cv::imshow(OPENCV_WINDOW_LEFT,undistorted_l);
+        cv::imshow(OPENCV_WINDOW_RIGHT,undistorted_r);
+
+        cv::waitKey(0);
+        
         return;
 
     };
