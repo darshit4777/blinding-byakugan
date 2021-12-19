@@ -592,8 +592,8 @@ class TestIncrementalMotion{
     TestFixtureVisualTracking* visual_tracking_test;
 
     TestIncrementalMotion(ros::NodeHandle& nh){
-        visual_tracking_test = new TestFixtureVisualTracking(nh);
         LoadCameras();
+        visual_tracking_test = new TestFixtureVisualTracking(nh);
         TestMain();
         delete visual_tracking_test->tracking;
         return;
@@ -639,8 +639,6 @@ class TestIncrementalMotion{
             // TODO : This is a band-aid patch - not quite elegant. A better solution would be to use class variables 
             // that keep track of current and previous frames
             if(visual_tracking_test->tracking->frame_correspondences > 0){
-                // Before generating new pose, we execute RANSAC
-                visual_tracking_test->tracking->RANSACOutlierRejection();
                 new_pose = visual_tracking_test->tracking->EstimateIncrementalMotion();
             }
             else{
