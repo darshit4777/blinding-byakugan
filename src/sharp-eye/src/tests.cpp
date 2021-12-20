@@ -592,7 +592,7 @@ class TestIncrementalMotion{
     TestFixtureVisualTracking* visual_tracking_test;
 
     TestIncrementalMotion(ros::NodeHandle& nh){
-        LoadCameras();
+
         visual_tracking_test = new TestFixtureVisualTracking(nh);
         TestMain();
         delete visual_tracking_test->tracking;
@@ -654,6 +654,63 @@ class TestIncrementalMotion{
             }
             visual_tracking_test->image_idx++;
         };
+    };
+};
+
+class TestRANSAC{
+    public:
+    TestFixtureVisualTracking* visual_tracking_test;
+
+    TestRANSAC(ros::NodeHandle& nh){
+        visual_tracking_test = new TestFixtureVisualTracking(nh);
+        TestMain();
+        delete visual_tracking_test->tracking;
+        return;
+    }
+
+    void TestMain(){
+        while(visual_tracking_test->image_idx < visual_tracking_test->image_idx_max){
+            // Get Images
+            
+            GetCameraImages(visual_tracking_test->image_idx);
+            
+            // Undistort
+            UndistortImages(cam_l_intrinsics,cam_r_intrinsics,cam_l_distortion,cam_r_distortion,image_l,image_r);
+            
+            std::cout<<"New Frame"<<std::endl;
+            visual_tracking_test->tracking->SetPredictionCallTime();
+            // Visual Triangulation 
+            visual_tracking_test->DetectFeatures();
+            visual_tracking_test->Calculate3DCoordinates();
+            received_l = false;
+            received_r = false;
+            
+            // Store the framepoints for tracking
+            std::cout<<"Framepoint Vector Size"<<std::endl;
+            std::cout<<visual_tracking_test->framepoints.size()<<std::endl;
+            visual_tracking_test->tracking->SetFramepointVector(visual_tracking_test->framepoints);
+            visual_tracking_test->framepoints.clear();
+            
+            // Initialize a node
+            /// This step will initialize a new frame or local map.
+            visual_tracking_test->tracking->img_l = image_l;
+            visual_tracking_test->tracking->img_r = image_r;
+            visual_tracking_test->tracking->InitializeNode();
+            // Perform tracking by estimating the new pose
+            Frame* current_frame;
+            
+            Eigen::Transform<float,3,2> new_pose;
+            LocalMap* lmap_ptr = visual_tracking_test->tracking->map.GetLastLocalMap();
+            current_frame = lmap_ptr->GetLastFrame();
+
+            // RANSAC Testing
+            if(visual_tracking_test->tracking->frame_correspondences > 0){
+                visual_tracking_test->tracking->RANSACOutlierRejection();
+            }
+
+            visual_tracking_test->image_idx++;
+        };
+        return;
     };
 };
 
@@ -908,13 +965,9 @@ int main(int argc, char **argv){
     cam_right_image_list = GetImageFilenames(fb_right);
 
     LoadCameras();
-    
-    TestIncrementalMotion test(nh);
-    //TestPoseOptimizer test;
-    //TestDetectFeatures test;
-    //TestFindCorrespondences test;
+    TestRANSAC test(nh);
     return 0;
-}
+};
 
 /**
  * @brief TODO List 

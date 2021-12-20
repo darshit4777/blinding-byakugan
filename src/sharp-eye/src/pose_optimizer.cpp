@@ -154,27 +154,27 @@ float PoseOptimizer::ComputeError(Framepoint *fp, bool check_landmark)
     {
         std::cout << "Invalid pixels - NaN" << std::endl;
         compute_success = false;
-        return -1.0;
+        return FLT_MAX;
     };
     if (rcam_pixels[0] < 0 || rcam_pixels[1] < 0)
     {
         compute_success = false;
-        return -1.0;
+        return FLT_MAX;
     };
     if (lcam_pixels[0] < 0 || lcam_pixels[1] < 0)
     {
         compute_success = false;
-        return -1.0;
+        return FLT_MAX;
     };
-    if (lcam_pixels[0] > 720 || lcam_pixels[1] > 480)
+    if (lcam_pixels[0] > current_frame_ptr->image_l.cols || lcam_pixels[1] > current_frame_ptr->image_l.rows)
     {
         compute_success = false;
-        return -1.0;
+        return FLT_MAX;
     };
-    if (rcam_pixels[0] > 720 || rcam_pixels[1] > 480)
+    if (rcam_pixels[0] > current_frame_ptr->image_r.cols || rcam_pixels[1] > current_frame_ptr->image_r.rows)
     {
         compute_success = false;
-        return -1.0;
+        return FLT_MAX;
     };
 
     // Calculating Reprojection Error - Order is important - (Sampled-Fixed)
@@ -183,8 +183,6 @@ float PoseOptimizer::ComputeError(Framepoint *fp, bool check_landmark)
 
     reproj_error[2] = rcam_pixels[0] - fp->keypoint_r.keypoint.pt.x;
     reproj_error[3] = rcam_pixels[1] - fp->keypoint_r.keypoint.pt.y;
-    //reproj_error[2] = 0.0;
-    //reproj_error[3] = 0.0;
 
     float error_squared = reproj_error.transpose() * reproj_error;
     if (error_squared < parameters.kernel_maximum_error)
@@ -620,12 +618,12 @@ void PoseOptimizer::InitializeRANSAC(Frame *current_frame_ptr, float p , float e
 int PoseOptimizer::RANSACIterateOnce()
 {
     Frame random_frame;
-    Eigen::Vector3i random_indices;
+    Eigen::Vector3f random_indices;
     random_indices.setRandom();
-    random_indices = random_indices / INT16_MAX;
+    random_indices = random_indices;
     
     for(int i = 0; i < 3; i++){
-        random_indices[i] = abs(random_indices[i] * ransac_params.n);
+        random_indices[i] = int(abs(random_indices[i] * ransac_params.n));
         int frame_ptr_index = ransac_params.valid_point_indices[random_indices[i]];
         random_frame.points.push_back(current_frame_ptr->points[frame_ptr_index]);
     };
@@ -640,20 +638,13 @@ int PoseOptimizer::RANSACIterateOnce()
     // We create convergence and solving criteria here
     float previous_error = 0;
     float error_delta = 0;
+    T_prev2curr.setIdentity();
     for (int i = 0; i < parameters.max_iterations; i++)
     {
         //TODO : This needs work
+        parameters.ignore_outliers = false; //< Outliers will be used for model creation
         OptimizeOnce(&random_frame);
         std::cout << "No of inliers are " << inliers << std::endl;
-        if (inliers < parameters.min_inliers)
-        {
-            parameters.ignore_outliers = false;
-        }
-        else
-        {
-            parameters.ignore_outliers = true;
-        }
-
         error_delta = fabs(iteration_error - previous_error);
         previous_error = iteration_error;
 
@@ -665,7 +656,7 @@ int PoseOptimizer::RANSACIterateOnce()
     };
 
     // Checking the number of ransac inliers with this model
-    int ransac_inliers;
+    int ransac_inliers = 0;
     for (int i = 0; i < ransac_params.n; i++)
     {
         int frame_ptr_index = ransac_params.valid_point_indices[i];
@@ -674,7 +665,7 @@ int PoseOptimizer::RANSACIterateOnce()
         // Now compute the reprojection error
         float error = ComputeError(fp);
 
-        if(error < 10){
+        if(error < 50 && compute_success){
             ransac_inliers++;
         }
     }
@@ -691,7 +682,7 @@ void PoseOptimizer::RANSACConverge(){
 
     for(int i = 0; i<ransac_params.t; i++){
         int ransac_inliers = RANSACIterateOnce();
-        std::cout<<"Inliers "<<ransac_inliers<<std::endl;
+        std::cout<<"Ransac Inliers "<<ransac_inliers<<std::endl;
     };
 
     std::cout<<"Optimal model"<<std::endl;
