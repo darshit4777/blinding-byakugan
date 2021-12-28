@@ -32,7 +32,7 @@ PoseOptimizer::PoseOptimizer(){
     b.setZero();
     T_prev2curr.setIdentity();
     parameters.T_caml2camr.setIdentity();
-    parameters.T_caml2camr.translation() << 0.0, 0.0, 0.11074;
+    parameters.T_caml2camr.translation() << 0.110074, 0.0, 0.0;
     parameters.T_caml2camr.rotation().Identity();
 
     // Initializing errors
