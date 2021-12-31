@@ -1,5 +1,7 @@
 #include <sharp-eye/visual_triangulation.hpp>
-
+#include <opencv2/highgui.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
 typedef std::vector<KeypointWD> FeatureVector;
 typedef std::vector<Framepoint> FramepointVector;
 typedef std::vector<std::pair<KeypointWD,KeypointWD>> MatchVector;
@@ -8,10 +10,13 @@ VisualTriangulation::VisualTriangulation(){
         
         // Initializing the ORB Feature Detector
         orb_detector = cv::ORB::create();
-        fast_detector = cv::FastFeatureDetector::create();
+        fast_detector = cv::FastFeatureDetector::create(30);
         feature_descriptor = cv::ORB::create();
+        
         horizontal_bins = 10;
         vertical_bins = 10;
+        min_keypoints_in_bin = 1;
+        fast_feature_threshold = 30;
         
         // Initializing the matcher
         matcher = cv::FlannBasedMatcher(new cv::flann::LshIndexParams(20, 10, 2));
@@ -57,14 +62,23 @@ FeatureVector VisualTriangulation::DetectAndComputeFeatures(cv::Mat* img_ptr,Fea
     for(int i =0; i < horizontal_bins; i++){
         for(int j =0; j<vertical_bins; j++){
             cv::Mat mask = cv::Mat::zeros(img_ptr->size(),CV_8U);        
-            
             cv::Mat roi(mask, cv::Rect(i*img_width/horizontal_bins,j*img_height/vertical_bins,img_width/horizontal_bins,img_height/vertical_bins));
             roi = cv::Scalar(255);
+            
             std::vector<cv::KeyPoint> bin_keypoints;
             cv::Mat descriptors;
             fast_detector->detect(*img_ptr,bin_keypoints,mask);
+            if(bin_keypoints.size() < min_keypoints_in_bin){
+                // Provision to re-run the feature detector if a particular bin has less than minimum features.
+                fast_detector->setThreshold(fast_feature_threshold/2);
+                bin_keypoints.clear();
+                fast_detector->detect(*img_ptr,bin_keypoints,mask);
+                fast_detector->setThreshold(fast_feature_threshold);
+            };
+            
             feature_descriptor->compute(*img_ptr,bin_keypoints,descriptors);
-            //orb_detector->detectAndCompute(*img_ptr,mask,bin_keypoints,descriptors);
+
+
             for(int i = 0; i < bin_keypoints.size(); i++){
                 KeypointWD feature;
                 image_keypoints.push_back(bin_keypoints[i]);

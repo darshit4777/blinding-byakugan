@@ -32,6 +32,8 @@ class VisualTriangulation{
 
     int vertical_bins;
     int horizontal_bins;
+    int min_keypoints_in_bin;
+    int fast_feature_threshold;
 
     // Image Handling
     cv::Mat image_l;
