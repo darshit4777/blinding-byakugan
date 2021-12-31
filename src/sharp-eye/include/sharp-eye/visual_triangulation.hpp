@@ -20,13 +20,18 @@ class VisualTriangulation{
 
     // Feature Handling
     cv::Ptr<cv::FeatureDetector> orb_detector;
-    cv::Ptr<cv::DescriptorExtractor> orb_descriptor;
+    cv::Ptr<cv::DescriptorExtractor> feature_descriptor;
+    cv::Ptr<cv::FastFeatureDetector> fast_detector;
+
     std::vector<KeypointWD> keypoints_l;
     std::vector<KeypointWD> keypoints_r;
     int detection_threshold;
 
     cv::FlannBasedMatcher matcher;
     std::vector<cv::DMatch> keypoint_matches;
+
+    int vertical_bins;
+    int horizontal_bins;
 
     // Image Handling
     cv::Mat image_l;

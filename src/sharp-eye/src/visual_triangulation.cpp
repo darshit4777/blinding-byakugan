@@ -6,18 +6,15 @@ typedef std::vector<std::pair<KeypointWD,KeypointWD>> MatchVector;
 
 VisualTriangulation::VisualTriangulation(){
         
-        // Copy the cameras over
-        //camera_l = left;
-        //camera_r = right;
-
         // Initializing the ORB Feature Detector
-        orb_detector = cv::ORB::create(10);
+        orb_detector = cv::ORB::create();
+        fast_detector = cv::FastFeatureDetector::create();
+        feature_descriptor = cv::ORB::create();
+        horizontal_bins = 10;
+        vertical_bins = 10;
         
         // Initializing the matcher
-        
         matcher = cv::FlannBasedMatcher(new cv::flann::LshIndexParams(20, 10, 2));
-        //detector->detect(src,keypoints);
-        //drawKeypoints(dst, keypoints, dst, Scalar::all(-1), DrawMatchesFlags::DRAW_OVER_OUTIMG);
         std::cout<<"Visual Triangulation Initialized"<<std::endl;
         
     };
@@ -54,16 +51,20 @@ FeatureVector VisualTriangulation::DetectFeatures(cv::Mat* img_ptr,bool draw){
 FeatureVector VisualTriangulation::DetectAndComputeFeatures(cv::Mat* img_ptr,FeatureVector &features,bool draw){
     
     std::vector<cv::KeyPoint> image_keypoints;
-    
+    int img_width = img_ptr->cols;
+    int img_height = img_ptr->rows;
     //  Mask creator for binning in feature detection
-    for(int i =0; i < 6; i++){
-        for(int j =0; j<4; j++){
-            cv::Mat mask = cv::Mat::zeros(img_ptr->size(),CV_8U);
-            cv::Mat roi(mask, cv::Rect(120*i,120*j,120,120));
+    for(int i =0; i < horizontal_bins; i++){
+        for(int j =0; j<vertical_bins; j++){
+            cv::Mat mask = cv::Mat::zeros(img_ptr->size(),CV_8U);        
+            
+            cv::Mat roi(mask, cv::Rect(i*img_width/horizontal_bins,j*img_height/vertical_bins,img_width/horizontal_bins,img_height/vertical_bins));
             roi = cv::Scalar(255);
             std::vector<cv::KeyPoint> bin_keypoints;
             cv::Mat descriptors;
-            orb_detector->detectAndCompute(*img_ptr,mask,bin_keypoints,descriptors);
+            fast_detector->detect(*img_ptr,bin_keypoints,mask);
+            feature_descriptor->compute(*img_ptr,bin_keypoints,descriptors);
+            //orb_detector->detectAndCompute(*img_ptr,mask,bin_keypoints,descriptors);
             for(int i = 0; i < bin_keypoints.size(); i++){
                 KeypointWD feature;
                 image_keypoints.push_back(bin_keypoints[i]);
@@ -103,7 +104,8 @@ FeatureVector VisualTriangulation::ExtractKeypointDescriptors(cv::Mat* img_ptr,F
     for(KeypointWD &feature : feature_vec){
         cv::Mat descriptor;
         keypoints.push_back(feature.keypoint);
-        orb_descriptor->compute(*img_ptr,keypoints,descriptor);
+        feature_descriptor->compute(*img_ptr,keypoints,descriptor);
+        
         feature.descriptor = descriptor;
 
         KeypointWD out_feature;
@@ -253,7 +255,7 @@ MatchVector VisualTriangulation::GetEpipolarMatches(FeatureVector &left_vec, Fea
     });
 
     //configuration
-    const float maximum_matching_distance = 6;
+    const float maximum_matching_distance = 6.0;
     int idx_R = 0;
     //loop over all left keypoints
     for (int idx_L = 0; idx_L < left_vec.size(); idx_L++) {
