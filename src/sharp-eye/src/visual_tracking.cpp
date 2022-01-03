@@ -74,11 +74,11 @@ int VisualTracking::FindCorrespondences(FramepointPointerVector& previous_frame,
         int id_current = 0;
         std::vector<int> match_shortlist; // Framepoints found in the rectangular search region
         int ymin,ymax,xmin,xmax;
-        ymin = std::max(int(query_framepoint->keypoint_l.keypoint.pt.y - 50),0);
-        ymax = std::min(int(query_framepoint->keypoint_l.keypoint.pt.y + 50),img_height);
+        ymin = std::max(int(query_framepoint->keypoint_l.keypoint.pt.y - 200),0);
+        ymax = std::min(int(query_framepoint->keypoint_l.keypoint.pt.y + 200),img_height);
 
-        xmin = std::max(int(query_framepoint->keypoint_l.keypoint.pt.x - 200),0);
-        xmax = std::min(int(query_framepoint->keypoint_l.keypoint.pt.x + 200),img_width);
+        xmin = std::max(int(query_framepoint->keypoint_l.keypoint.pt.x - 300),0);
+        xmax = std::min(int(query_framepoint->keypoint_l.keypoint.pt.x + 300),img_width);
         
         // Loop to search for the top of the rectangular region
         // TODO We need to fix this line = its too shabby
@@ -255,13 +255,10 @@ Eigen::Matrix<float,4,6> VisualTracking::FindJacobian(Eigen::Vector3f& left_cam_
 };
 
 Eigen::Transform<float,3,2> VisualTracking::EstimateIncrementalMotion(){
-    optimizer->parameters.T_caml2camr = T_caml2camr;
-     
     LocalMap* lmap_ptr = map.GetLastLocalMap();
     Frame* previous_frame_ptr = lmap_ptr->GetPreviousFrame();
     Frame* current_frame_ptr = lmap_ptr->GetLastFrame();
     optimizer->Initialize(current_frame_ptr,previous_frame_ptr,lmap_ptr);
-    optimizer->OptimizeOnce();
     optimizer->Converge();
 
     return current_frame_ptr->T_world2cam;
