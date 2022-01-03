@@ -12,9 +12,9 @@ typedef Camera Camera;
 PoseOptimizer::PoseOptimizer(){
     // Setting all params
     parameters.minimum_depth = 0.1;
-    parameters.maximum_depth = 10.0;
+    parameters.maximum_depth = 15.0;
     parameters.maximum_reliable_depth = 10.0;
-    parameters.kernel_maximum_error = 200;
+    parameters.kernel_maximum_error = 10;
     parameters.solver_maximum_error = 10;
     parameters.max_iterations = 100;
 
@@ -52,21 +52,20 @@ PoseOptimizer::PoseOptimizer(){
 
     std::cout<<"Pose Optimizer Initialized"<<std::endl;
     return;
-};
+}
 
 void PoseOptimizer::Initialize(Frame* curr_frame_ptr,Frame* prev_frame_ptr,LocalMap* local_map_ptr){
     // This needs to be called once before the OptimizeOnce can be used
 
     current_frame_ptr = curr_frame_ptr;
     previous_frame_ptr = prev_frame_ptr;
-    lmap_ptr = local_map_ptr;
     std::cout<<"No of points"<<std::endl;
     std::cout<<current_frame_ptr->points.size()<<std::endl;
     // No of measurements
     //std::cout<<"Initial Pose"<<std::endl;
     //std::cout<<current_frame_ptr->T_world2cam.matrix()<<std::endl;
     measurements = 0;
-    for(int i =0; i< current_frame_ptr->points.size(); i++){
+    for(unsigned int i =0; i< current_frame_ptr->points.size(); i++){
         // TODO : Fix this statement - too shabby
         if(current_frame_ptr->points[i].get()->previous == NULL){
             continue;
@@ -80,11 +79,10 @@ void PoseOptimizer::Initialize(Frame* curr_frame_ptr,Frame* prev_frame_ptr,Local
     H.setZero();
     b.setZero();
     omega.setIdentity();
-    //T_prev2curr = previous_frame_ptr->T_cam2world;
     T_prev2curr.setIdentity();
     inliers = 0;
     return;
-};
+}
 
 void PoseOptimizer::ComputeError(Framepoint* fp){
     /**
@@ -98,12 +96,7 @@ void PoseOptimizer::ComputeError(Framepoint* fp){
         compute_success = false;
         return;
     }
-    
-    //std::vector<Framepoint> fp_1,fp_2;
-    //fp_1.push_back(*fp);
-    //fp_2.push_back(*fp->previous);
-    //VisualizeFramepointComparision(fp_1,current_frame_ptr->image_l,fp_2,current_frame_ptr->image_l);
-    
+
     p_caml = T_prev2curr*fp->previous->camera_coordinates;
     p_camr = T_prev2curr*parameters.T_caml2camr.inverse()*fp->previous->camera_coordinates;
 
@@ -154,11 +147,11 @@ void PoseOptimizer::ComputeError(Framepoint* fp){
         compute_success = false;
         return;
     };
-    if(lcam_pixels[0] > 720 || lcam_pixels[1] > 480){
+    if(lcam_pixels[0] > 752 || lcam_pixels[1] > 480){
         compute_success = false;
         return;
     };
-    if(rcam_pixels[0] > 720 || rcam_pixels[1] > 480){
+    if(rcam_pixels[0] > 752 || rcam_pixels[1] > 480){
         compute_success = false;
         return;
     };
@@ -169,32 +162,14 @@ void PoseOptimizer::ComputeError(Framepoint* fp){
 
     reproj_error[2] = rcam_pixels[0] - fp->keypoint_r.keypoint.pt.x;
     reproj_error[3] = rcam_pixels[1] - fp->keypoint_r.keypoint.pt.y;
-    //reproj_error[2] = 0.0;
-    //reproj_error[3] = 0.0;
     
     const float error_squared = reproj_error.transpose()*reproj_error;
-    if(error_squared < parameters.kernel_maximum_error){
-        // Drawing it on the images for visualization
-        /// Drawing the fixed points
-        //cv::circle(_img_left,fp->keypoint_l.keypoint.pt,3,cv::Scalar(255,0,0),CV_FILLED);
-        //cv::circle(_img_right,fp->keypoint_r.keypoint.pt,3,cv::Scalar(255,0,0),CV_FILLED);
-    
-        /// Drawing the moving points
-        //cv::Point2d l_point, r_point;
-        //l_point.x = lcam_pixels[0];
-        //l_point.y = lcam_pixels[1];
-        //cv::circle(_img_left,l_point,3,cv::Scalar(0,0,255),CV_FILLED);
-
-        //r_point.x = rcam_pixels[0];
-        //r_point.y = rcam_pixels[1];
-        //cv::circle(_img_right,r_point,3,cv::Scalar(0,0,255),CV_FILLED);
-    };
 
     iteration_error = iteration_error + error_squared;
 
     compute_success = true;
     return;
-};
+}
 
 bool PoseOptimizer::HasInf(Eigen::Vector3f vec){
 
@@ -203,13 +178,13 @@ bool PoseOptimizer::HasInf(Eigen::Vector3f vec){
      * 
      */
 
-    for(int i = 0; i<vec.size(); i++){
+    for(unsigned int i = 0; i<vec.size(); i++){
         if(std::isinf(vec[i])){
             return true;
         };
     };  
     return false;
-};
+}
 
 void PoseOptimizer::Linearize(Framepoint* fp){
     /**
@@ -264,6 +239,7 @@ void PoseOptimizer::Linearize(Framepoint* fp){
 
 Eigen::Matrix<float,4,6> PoseOptimizer::FindJacobian(Eigen::Vector3f& left_cam_coordinates,Eigen::Vector3f& right_cam_coordinates,Camera& camera_l,Camera& camera_r,float omega){
     Eigen::Matrix<float,4,6> J;
+    J.setZero();
 
     Eigen::Matrix<float,2,3> left_projection_derivative, right_projection_derivative;
     float fx_l,fy_l;
@@ -288,10 +264,9 @@ Eigen::Matrix<float,4,6> PoseOptimizer::FindJacobian(Eigen::Vector3f& left_cam_c
     left_projection_derivative(1,1) = fy_l/z_l;
     left_projection_derivative(1,2) = -fy_l*y_l/(z_l*z_l);
 
-    x_r = right_cam_coordinates[0];
-    y_r = right_cam_coordinates[1];
-    z_r = right_cam_coordinates[2];
-
+    x_r = x_l + 0.110074;
+    y_r = y_l;
+    z_r = z_l;
     right_projection_derivative(0,0) = fx_r/z_r;
     right_projection_derivative(0,1) = 0.0;
     right_projection_derivative(0,2) = -fx_r*x_r/(z_r*z_r);
@@ -304,22 +279,21 @@ Eigen::Matrix<float,4,6> PoseOptimizer::FindJacobian(Eigen::Vector3f& left_cam_c
     identity3.setIdentity();
     //std::cout<<"G coordinates "<<x_l<<" "<<y_l<<" "<<" "<<z_l<<std::endl;
     hat_cam_coordinates(0,0) = 0.0;
-    hat_cam_coordinates(0,1) = -2*z_l;
-    hat_cam_coordinates(0,2) = 2*y_l;
-    hat_cam_coordinates(1,0) = 2*z_l;
+    hat_cam_coordinates(0,1) = -z_l;
+    hat_cam_coordinates(0,2) = y_l;
+    hat_cam_coordinates(1,0) = z_l;
     hat_cam_coordinates(1,1) = 0.0;
-    hat_cam_coordinates(1,2) = -2*x_l;
-    hat_cam_coordinates(2,0) = -2*y_l;
-    hat_cam_coordinates(2,1) = 2*x_l;
+    hat_cam_coordinates(1,2) = -x_l;
+    hat_cam_coordinates(2,0) = -y_l;
+    hat_cam_coordinates(2,1) = x_l;
     hat_cam_coordinates(2,2) = 0.0;
 
     Eigen::Matrix<float,3,6> J_Transform;
     J_Transform.block<3,3>(0,0) = identity3 * omega;
-    J_Transform.block<3,3>(0,3) = -hat_cam_coordinates;
+    J_Transform.block<3,3>(0,3) = -2*hat_cam_coordinates;
 
     J.block<2,6>(0,0) = left_projection_derivative * J_Transform;
     J.block<2,6>(2,0) = right_projection_derivative * J_Transform;
-
     //Eigen::Matrix<float,2,6> J_test;
     //J_test(0,0) = fx_l/z_l;
     //J_test(0,1) = 0;
@@ -333,9 +307,8 @@ Eigen::Matrix<float,4,6> PoseOptimizer::FindJacobian(Eigen::Vector3f& left_cam_c
     //J_test(1,3) = -fy_l * (1 + (y_l*y_l)/(z_l*z_l));
     //J_test(1,4) = fy_l * x_l * y_l / (z_l*z_l);
     //J_test(1,5) = fy_l * x_l /z_l;
-
     return J;
-};
+}
 
 void PoseOptimizer::Solve(){
     /**
@@ -419,7 +392,7 @@ void PoseOptimizer::OptimizeOnce(){
     iteration_error = 0;
     inliers = 0;
 
-    for(int i =0; i < current_frame_ptr->points.size(); i++){
+    for(unsigned int i =0; i < current_frame_ptr->points.size(); i++){
         Framepoint* fp_ptr = current_frame_ptr->points[i].get();
         ComputeError(fp_ptr);
         Linearize(fp_ptr);
@@ -437,12 +410,12 @@ void PoseOptimizer::Converge(){
     //TODO : This needs work
         OptimizeOnce();    
         std::cout<<"No of inliers are "<<inliers<<std::endl;
-        if(inliers < parameters.min_inliers){
-            parameters.ignore_outliers = false;
-        }
-        else{
-            parameters.ignore_outliers = true;
-        }
+        //if(inliers < parameters.min_inliers){
+        //    parameters.ignore_outliers = false;
+        //}
+        //else{
+        //    parameters.ignore_outliers = true;
+        //}
         
         //std::cout<<"Iteration Error "<<iteration_error<<std::endl;
         error_delta = fabs(iteration_error - previous_error);
@@ -458,12 +431,12 @@ void PoseOptimizer::Converge(){
     };
     Update();
     return;
-};
+}
 
 PoseOptimizer::~PoseOptimizer(){
     cv::destroyAllWindows();
     return;
-};
+}
 void PoseOptimizer::VisualizeFramepoints(FramepointVector fp_vec,cv::Mat& image,int cam,cv::Scalar color = cv::Scalar(0,0,255)){
     /**
      * @brief Draw framepoints on an image
@@ -498,7 +471,7 @@ void PoseOptimizer::VisualizeFramepoints(FramepointVector fp_vec,cv::Mat& image,
         cv::imshow(right_cam,img_rgb);
     };
     return;   
-};
+}
 
 void PoseOptimizer::VisualizeFramepointComparision(FramepointVector fp_vec1,cv::Mat& image_1,FramepointVector fp_vec2,cv::Mat& image_2){
     
