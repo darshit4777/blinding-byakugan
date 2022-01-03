@@ -10,13 +10,13 @@ VisualTriangulation::VisualTriangulation(){
         
         // Initializing the ORB Feature Detector
         orb_detector = cv::ORB::create();
-        fast_detector = cv::FastFeatureDetector::create(30);
+        fast_feature_threshold = 20;
+        fast_detector = cv::FastFeatureDetector::create(fast_feature_threshold);
         feature_descriptor = cv::ORB::create();
         
-        horizontal_bins = 10;
-        vertical_bins = 10;
+        horizontal_bins = 1;
+        vertical_bins = 1;
         min_keypoints_in_bin = 1;
-        fast_feature_threshold = 30;
         
         // Initializing the matcher
         matcher = cv::FlannBasedMatcher(new cv::flann::LshIndexParams(20, 10, 2));
@@ -168,10 +168,8 @@ MatchVector VisualTriangulation::GetKeypointMatches(FeatureVector &left_vec, Fea
         std::cout<<"Warning - No Descriptors for Left camera"<<std::endl;
         return matched_vector;
     };
-
-    //std::cout<<descriptor_r.rows<<" "<<descriptor_r.cols<<std::endl;
-    //std::cout<<descriptor_l.rows<<" "<<descriptor_l.cols<<std::endl;
     matcher.knnMatch(descriptor_l,descriptor_r,knn_matches,2);
+    
     //-- Filter matches using the Lowe's ratio test
     const float ratio_thresh = 0.7f;
     std::vector<cv::DMatch> good_matches;
@@ -255,6 +253,7 @@ FramepointVector VisualTriangulation::Generate3DCoordinates(MatchVector &matched
 MatchVector VisualTriangulation::GetEpipolarMatches(FeatureVector &left_vec, FeatureVector &right_vec){
 
     MatchVector matched_keypoints;
+    matched_keypoints.clear();
     
     // Large sorting expression that is explained in the ProSLAM paper
 
@@ -269,58 +268,36 @@ MatchVector VisualTriangulation::GetEpipolarMatches(FeatureVector &left_vec, Fea
     });
 
     //configuration
-    const float maximum_matching_distance = 6.0;
+    const float maximum_matching_distance = 25.6;
     int idx_R = 0;
+    int epipolar_tolerance = 2;
     //loop over all left keypoints
     for (int idx_L = 0; idx_L < left_vec.size(); idx_L++) {
-        
-        //stop condition
-        if (idx_R == right_vec.size()){
-            break;
-        }
-
-        //the right keypoints are on a lower row - skip left
-        while (left_vec[idx_L].keypoint.pt.y < right_vec[idx_R].keypoint.pt.y){
-            idx_L++;
-            if (idx_L == right_vec.size()){
-                break;
-            };
-        };
-
-        //the right keypoints are on an upper row - skip right
-        while (left_vec[idx_L].keypoint.pt.y > right_vec[idx_R].keypoint.pt.y){
-            idx_R++;
-            if (idx_R == right_vec.size()){
-                break;
-            }
-        }
-        //search bookkeeping
-        int idx_RS = idx_R;
+        int epipolar_lower_line = left_vec[idx_L].keypoint.pt.y + epipolar_tolerance;
+        int epipolar_upper_line = left_vec[idx_L].keypoint.pt.y - epipolar_tolerance;
+        float dist = maximum_matching_distance;
         float dist_best = maximum_matching_distance;
-        int idx_best_R = 0;
-        //scan epipolar line for current keypoint at idx_L
-        while (left_vec[idx_L].keypoint.pt.y == right_vec[idx_RS].keypoint.pt.y){
-            //zero disparity stop condition
-            if (right_vec[idx_RS].keypoint.pt.x >= left_vec[idx_L].keypoint.pt.x){
-                break;
-            }
-            //compute descriptor distance using hamming norm
-            const float dist = cv::norm(left_vec[idx_L].descriptor, right_vec[idx_RS].descriptor,cv::NORM_HAMMING);
-            if(dist < dist_best){
-                dist_best = dist;
-                idx_best_R = idx_RS;
+        std::pair<KeypointWD,KeypointWD> matched_pair;
+        for(auto point : right_vec){
+
+            if(point.keypoint.pt.y == left_vec[idx_L].keypoint.pt.y){
+                // This point is a candidate for matching
+                // compute descriptor distance using hamming norm
+                if(point.keypoint.pt.x > left_vec[idx_L].keypoint.pt.x){
+                    continue;
+                }
+                dist = cv::norm(left_vec[idx_L].descriptor, point.descriptor,cv::NORM_HAMMING);
+                if(dist < dist_best){
+                    dist_best = dist;
+                    matched_pair.first = left_vec[idx_L];
+                    matched_pair.second = point;
+                };
             };
-            idx_RS++;
         };
-        //check if something was found
-        if (dist_best < maximum_matching_distance) {
-            std::pair<KeypointWD,KeypointWD> matched_pair;
-            matched_pair.first = left_vec[idx_L];
-            matched_pair.second = right_vec[idx_best_R];
-            
+        if(dist_best < maximum_matching_distance){
             matched_keypoints.push_back(matched_pair);
-        };
-    };
+        }
+    }
     return matched_keypoints;
 };
 
