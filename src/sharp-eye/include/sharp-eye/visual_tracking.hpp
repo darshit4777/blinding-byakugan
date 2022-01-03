@@ -43,9 +43,6 @@ class VisualTracking{
     FramepointPointerVector framepoint_vec;
     FramepointPointerVector lost_points;
 
-    // Left and Right Camera transform
-    Eigen::Transform<float,3,2> T_caml2camr;
-
     // Correspondences
     int frame_correspondences;
 
