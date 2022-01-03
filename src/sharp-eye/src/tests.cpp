@@ -14,6 +14,9 @@
 #include <nav_msgs/Odometry.h>
 #include <sharp-eye/point_sim.hpp>
 #include <slam_datatypes/slam_datatypes.hpp>
+#include <opencv2/calib3d.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/core.hpp>
 /**
  * This file will create an executable which will serve as a test node and 
  * later on will be repurposed to form the ROS layer
@@ -26,7 +29,6 @@ cv::Mat undistorted_r;
 bool received_l,received_r;
 std::vector<std::vector<std::string>> cam_left_image_list;
 std::vector<std::vector<std::string>> cam_right_image_list;
-
 //static const std::string OPENCV_WINDOW = "Image window";
 static const std::string OPENCV_WINDOW_LEFT = "Left Image window";
 static const std::string OPENCV_WINDOW_RIGHT = "Right Image window";
@@ -96,8 +98,8 @@ std::vector<std::vector<std::string>> GetImageFilenames(std::filebuf &fb){
 
 void GetCameraImages(int image_idx){
 
-    std::string image_path_left = "/home/darshit/Code/blinding-byakugan/MH_01_easy/mav0/cam0/data/";
-    std::string image_path_right = "/home/darshit/Code/blinding-byakugan/MH_01_easy/mav0/cam1/data/";
+    std::string image_path_left = "/home/darshit/Code/blinding-byakugan/MH_01_easy/MH_01_easy.txt.d/left_camera/";
+    std::string image_path_right = "/home/darshit/Code/blinding-byakugan/MH_01_easy/MH_01_easy.txt.d/right_camera/";
 
     std::vector<std::string> fname_row_l = cam_left_image_list[image_idx];
     std::vector<std::string> fname_row_r = cam_right_image_list[image_idx];
@@ -105,8 +107,8 @@ void GetCameraImages(int image_idx){
     std::string image_fname_left = fname_row_l[0];
     std::string image_fname_right = fname_row_r[0];
 
-    image_path_left = image_path_left+image_fname_left+".png";
-    image_path_right = image_path_right+image_fname_right+".png";
+    image_path_left = image_path_left+image_fname_left;
+    image_path_right = image_path_right+image_fname_right;
 
     image_l = cv::imread(image_path_left);
     image_r = cv::imread(image_path_right);
@@ -116,6 +118,18 @@ void GetCameraImages(int image_idx){
 
     return;
 }
+
+void GetProslamCameraImages(int image_idx){
+    //std::string image_path = "/home/darshit/Code/proslam/MH_01_easy/MH_01_easy.txt.d/";
+    //std::vector<std::string> fname_row_l = image_list[image_idx];
+    //std::vector<std::string> fname_row_r = image_list[image_idx + 1];
+//
+    //std::string image_fname_left = fname_row_l[0];
+    //std::string image_fname_right = fname_row_r[0];
+//
+    //image_l = cv::imread(image_path + image_fname_left);
+    //image_r = cv::imread(image_path + image_fname_right);
+};
 
 
 class TestDetectFeatures{
@@ -130,15 +144,15 @@ class TestDetectFeatures{
         while(image_idx < image_idx_max){
             
             // Get new camera images
-            GetCameraImages(image_idx);
+            GetProslamCameraImages(image_idx);
 
             triangulator.DetectAndComputeFeatures(&image_l,features,true);
             cv::imshow(OPENCV_WINDOW_LEFT,image_l);
-            cv::waitKey(5);
+            cv::waitKey(0);
             
             triangulator.DetectAndComputeFeatures(&image_r,features,true);
             cv::imshow(OPENCV_WINDOW_RIGHT,image_r);
-            cv::waitKey(5);
+            cv::waitKey(1);
             
             image_idx++;
         };
@@ -146,8 +160,8 @@ class TestDetectFeatures{
     };
 
     TestDetectFeatures(){
-        image_idx = 1980;
-        image_idx_max = 2000;
+        image_idx = 0;
+        image_idx_max = 200;
         TestMain();
     };
 
@@ -163,7 +177,7 @@ class TestGetMatchedKeypoints{
 
     TestGetMatchedKeypoints(){
         image_idx = 1;
-        image_idx_max = 50;
+        image_idx_max = 10;
         TestMain();
         return;
     }
@@ -175,8 +189,8 @@ class TestGetMatchedKeypoints{
         while(image_idx < image_idx_max){
             
             // Get new images
-            GetCameraImages(image_idx);
-
+            //GetCameraImages(image_idx);
+            GetProslamCameraImages(image_idx);
             features_l.clear();
             features_l = triangulator.DetectAndComputeFeatures(&image_l,features_l,false);
             
@@ -184,15 +198,8 @@ class TestGetMatchedKeypoints{
             features_r = triangulator.DetectAndComputeFeatures(&image_r,features_r,false);
             
             // Get Matches
-            MatchVector matches = triangulator.GetKeypointMatches(features_l,features_r);
-            DrawMatches(matches,&image_l,&image_r);
-            cv::imshow(OPENCV_WINDOW_LEFT,image_l);
-            cv::waitKey(5);
-            cv::imshow(OPENCV_WINDOW_RIGHT,image_r);
-            cv::waitKey(5);
-
-            
-
+            MatchVector matches = triangulator.GetEpipolarMatches(features_l,features_r);
+            DrawMatches(matches,&image_l,&image_r);        
             image_idx++;
             
         };
@@ -200,29 +207,25 @@ class TestGetMatchedKeypoints{
     }
 
     void DrawMatches(MatchVector matches,cv::Mat* left_img, cv::Mat* right_img){
-        std::vector<cv::KeyPoint> keypoints_l;
-        std::vector<cv::KeyPoint> keypoints_r;
+        cv::Mat combined_image;
+        cv::hconcat(*left_img,*right_img,combined_image);
+
         //std::cout<<matches.size()<<std::endl;
         if(matches.empty()){
             return;
         }
         
         for(int i = 0; i < matches.size(); i++){
-            cv::KeyPoint keypoint_l;
-            cv::KeyPoint keypoint_r;
+            cv::Point2f left_point;
+            cv::Point2f right_point;
 
-            keypoint_l = matches[i].first.keypoint;
-            keypoint_r = matches[i].second.keypoint;
-
-            keypoints_l.push_back(keypoint_l);
-            keypoints_r.push_back(keypoint_r);
+            left_point = matches[i].first.keypoint.pt;
+            right_point = matches[i].second.keypoint.pt;
+            right_point.x = right_point.x + left_img->cols;
+            cv::line(combined_image,left_point,right_point,(0,0,255),1);
         };
-        
-        // Draw the left matches
-        cv::drawKeypoints(*left_img, keypoints_l, *left_img, cv::Scalar::all(-1), cv::DrawMatchesFlags::DRAW_OVER_OUTIMG);
-
-        // Draw the left matches
-        cv::drawKeypoints(*right_img, keypoints_r, *right_img, cv::Scalar::all(-1), cv::DrawMatchesFlags::DRAW_OVER_OUTIMG);
+        cv::imshow(OPENCV_WINDOW_LEFT,combined_image);
+        cv::waitKey(0);
 
         return;
     };
@@ -261,9 +264,7 @@ class TestGenerate3DCoordinates{
         int count = 0;
         while(image_idx < image_idx_max){
             
-            GetCameraImages(image_idx);
-            
-            
+            GetProslamCameraImages(image_idx);
             features_l.clear();
             features_l = triangulator.DetectAndComputeFeatures(&image_l,features_l,false);
             
@@ -271,7 +272,7 @@ class TestGenerate3DCoordinates{
             features_r = triangulator.DetectAndComputeFeatures(&image_r,features_r,false);
             
             // Get Matches
-            MatchVector matches = triangulator.GetKeypointMatches(features_l,features_r);
+            MatchVector matches = triangulator.GetEpipolarMatches(features_l,features_r);
             //std::cout<<"No of matches "<<matches.size()<<std::endl;
             FramepointVector framepoints;
             triangulator.Generate3DCoordinates(matches,framepoints,baseline,focal_length,cam_intrinsics);
@@ -341,8 +342,8 @@ class TestFindCorrespondences{
                                     0.0,    456.134, 255.238,
                                     0.05,        0.0,    1.0;                               
 
-        image_idx = 1980;
-        image_idx_max = 2000;
+        image_idx = 0;
+        image_idx_max = 3;
         TestMain();
     };
 
@@ -362,10 +363,10 @@ class TestFindCorrespondences{
 
             
             // Get Matches
-            MatchVector matches = triangulator.GetKeypointMatches(features_l,features_r);
+            MatchVector matches = triangulator.GetEpipolarMatches(features_l,features_r);
 
             FramepointVector framepoints;
-            triangulator.Generate3DCoordinates(matches,framepoints,0.11,457.95,cam_left.intrinsics);
+            triangulator.Generate3DCoordinates(matches,framepoints,0.110074,435.20,cam_left.intrinsics);
             Frame current_frame;
             std::vector<boost::shared_ptr<Framepoint>> framepoint_ptr_vector;
             for(int i =0; i < framepoints.size(); i++){
@@ -384,28 +385,25 @@ class TestFindCorrespondences{
                 int correspondences;
                 correspondences = tracking.FindCorrespondences(frames[previous_index].points,frames[current_index].points);
                 // Drawing the correspondences on a compound image
-                cv::Mat joined_image;
-                
-                cv::hconcat(frames[previous_index].image_l,frames[current_index].image_l,joined_image);
-                //std::cout<<joined_image.channels()<<std::endl;
-                //cv::Mat joined_image_color(joined_image.size(),CV_8UC3);
-                //cv::cvtColor(joined_image,joined_image_color,CV_GRAY2BGR);
+                std::cout<<"No of correspondences "<<correspondences<<std::endl;
                 for(auto point : frames[current_index].points){
                     if(point->previous != NULL){
                         // A correspondence exists
                         cv::Point2f previous_frame_point;
                         cv::Point2f current_frame_point;
-
+                        cv::Mat joined_image;
+                        cv::hconcat(frames[previous_index].image_l,frames[current_index].image_l,joined_image);
                         previous_frame_point = point->previous->keypoint_l.keypoint.pt;
                         current_frame_point = point->keypoint_l.keypoint.pt;
                         current_frame_point.x += frames[previous_index].image_l.cols;
 
                         cv::line(joined_image,previous_frame_point,current_frame_point,(0,0,255),1);
+                        cv::imshow(OPENCV_WINDOW_LEFT,joined_image);
+                        cv::waitKey(1);
                     } 
                 }
                 
-                cv::imshow(OPENCV_WINDOW_LEFT,joined_image);
-                cv::waitKey(0);
+                
             }
                 
             image_idx++;
@@ -446,45 +444,14 @@ class TestIncrementalMotion{
     
     TestIncrementalMotion(ros::NodeHandle& nh){
         // Initializing Camera Matrices
-        cam_left.intrinsics << 458.654,     0.0,    367.215,
-                               0.0, 457.296,    248.375,
+        cam_left.intrinsics << 435.20,     0.0,    367.215,
+                               0.0, 435.20,    252.375,
                                0.0,     0.0,        1.0;
 
-        cam_left.distortion_coeffs.push_back(-0.28340811);
-        cam_left.distortion_coeffs.push_back(0.07395907);
-        cam_left.distortion_coeffs.push_back(0.00019359);
-        cam_left.distortion_coeffs.push_back(1.76187114e-05);
-
-        cam_right.intrinsics << 457.587,        0.0, 379.999,
-                                    0.0,    456.134, 255.238,
-                                    0.05,        0.0,    1.0;
-
-        cam_right.distortion_coeffs.push_back(-0.28368365);
-        cam_right.distortion_coeffs.push_back(0.07451284);
-        cam_right.distortion_coeffs.push_back(-0.00010473);
-        cam_right.distortion_coeffs.push_back(-3.55590700e-05);
-
-        cam_l_intrinsics = cv::Mat(3,3,cv::DataType<float>::type);    
-        cam_l_intrinsics.at<float>(0,0) = cam_left.intrinsics(0,0);
-        cam_l_intrinsics.at<float>(0,1) = cam_left.intrinsics(0,1);
-        cam_l_intrinsics.at<float>(0,2) = cam_left.intrinsics(0,2);
-        cam_l_intrinsics.at<float>(1,0) = cam_left.intrinsics(1,0);
-        cam_l_intrinsics.at<float>(1,1) = cam_left.intrinsics(1,1);
-        cam_l_intrinsics.at<float>(1,2) = cam_left.intrinsics(1,2);
-        cam_l_intrinsics.at<float>(2,0) = cam_left.intrinsics(2,0);
-        cam_l_intrinsics.at<float>(2,1) = cam_left.intrinsics(2,1);
-        cam_l_intrinsics.at<float>(2,2) = cam_left.intrinsics(2,2);
-
-        cam_r_intrinsics = cv::Mat(3,3,cv::DataType<float>::type);
-        cam_r_intrinsics.at<float>(0,0) = cam_right.intrinsics(0,0);
-        cam_r_intrinsics.at<float>(0,1) = cam_right.intrinsics(0,1);
-        cam_r_intrinsics.at<float>(0,2) = cam_right.intrinsics(0,2);
-        cam_r_intrinsics.at<float>(1,0) = cam_right.intrinsics(1,0);
-        cam_r_intrinsics.at<float>(1,1) = cam_right.intrinsics(1,1);
-        cam_r_intrinsics.at<float>(1,2) = cam_right.intrinsics(1,2);
-        cam_r_intrinsics.at<float>(2,0) = cam_right.intrinsics(2,0);
-        cam_r_intrinsics.at<float>(2,1) = cam_right.intrinsics(2,1);
-        cam_r_intrinsics.at<float>(2,2) = cam_right.intrinsics(2,2);                                    
+        cam_right.intrinsics << 435.20,        0.0, 367.215,
+                                    0.0,    435.134, 252.375,
+                                    0.0,        0.0,    1.0;
+                                    
 
         T_body2caml.matrix()<<   0.0148655429818, -0.999880929698, 0.00414029679422, -0.0216401454975,
                                     0.999557249008, 0.0149672133247, 0.025715529948, -0.064676986768,
@@ -495,15 +462,15 @@ class TestIncrementalMotion{
                                 0.999598781151, 0.0130119051815, 0.0251588363115, 0.0453689425024,
                                 -0.0253898008918, 0.0179005838253, 0.999517347078, 0.00786212447038,
                                 0.0, 0.0, 0.0, 1.0;
-
+        
         tracking = new VisualTracking(cam_left,cam_right);
         tracking->T_caml2camr = T_body2caml.inverse() * T_body2camr;
 
         nodehandle = nh;
         pose_publisher = nh.advertise<nav_msgs::Odometry>("/visual_odometry",10);
 
-        image_idx = 1980;
-        image_idx_max = 2000;
+        image_idx = 0;
+        image_idx_max = 3;
         TestMain();
         delete tracking;
         
@@ -521,8 +488,6 @@ class TestIncrementalMotion{
             // Visual Triangulation 
             DetectFeatures();
             Calculate3DCoordinates();
-            received_l = false;
-            received_r = false;
             
             // Store the framepoints for tracking
             std::cout<<"Framepoint Vector Size"<<std::endl;
@@ -558,7 +523,8 @@ class TestIncrementalMotion{
             //new_pose = z_rotation * new_pose;
             
             //new_pose = new_pose * y_rotation;
-            PublishPose(new_pose);
+            //PublishPose(new_pose);
+            std::cout<<tracking->optimizer->T_prev2curr.matrix()<<std::endl;
             
             // Calculate Motion Derivative
             if(tracking->map.local_maps[0]->frames.size() > 1){
@@ -575,28 +541,102 @@ class TestIncrementalMotion{
         features_l = triangulator.DetectAndComputeFeatures(&image_l,features_l,false);
         features_r.clear();
         features_r = triangulator.DetectAndComputeFeatures(&image_r,features_r,false);
-        //std::cout<<"Debug : Features size"<<std::endl;
-        //std::cout<<features_l.size()<<std::endl;
+        
+        cv::Mat image_l_copy, image_r_copy;
+        image_l_copy = image_l;
+        image_r_copy = image_r;
+        
+        std::vector<cv::KeyPoint> left_keypoint_vector;
+        std::vector<cv::KeyPoint> right_keypoint_vector;
+
+        for(auto feature : features_l){
+            cv::KeyPoint keypoint = feature.keypoint;
+            left_keypoint_vector.push_back(keypoint);
+        }
+        for(auto feature : features_r){
+            cv::KeyPoint keypoint = feature.keypoint;
+            right_keypoint_vector.push_back(keypoint);
+        }
+
+        cv::drawKeypoints(image_l_copy, left_keypoint_vector, image_l_copy, cv::Scalar::all(-1), cv::DrawMatchesFlags::DRAW_OVER_OUTIMG);
+        cv::drawKeypoints(image_r_copy, right_keypoint_vector, image_r_copy, cv::Scalar::all(-1), cv::DrawMatchesFlags::DRAW_OVER_OUTIMG);
+
+        cv::imshow(OPENCV_WINDOW_LEFT,image_l_copy);
+        cv::waitKey(1);
+        cv::imshow(OPENCV_WINDOW_RIGHT,image_r_copy);
+        cv::waitKey(0);
         return;
     };
 
     void Calculate3DCoordinates(){
         // Get Matches
-        matches = triangulator.GetKeypointMatches(features_l,features_r);
-        //std::cout<<"Debug : Matches size"<<std::endl;
-        //std::cout<<matches.size()<<std::endl;
-        // TODO : Put parametized arguments for baseline and fx
+        matches = triangulator.GetEpipolarMatches(features_l,features_r);
+        // Drawing the correspondences on a compound image
+        
+        for(auto match : matches){
+            cv::Point2f left_point = match.first.keypoint.pt;
+            cv::Point2f right_point = match.second.keypoint.pt;
+            cv::Mat joined_image;
+            cv::hconcat(image_l,image_r,joined_image);
+            right_point.x = right_point.x + image_l.cols;        
+            cv::line(joined_image,left_point,right_point,(0,0,255),1);
+            cv::imshow(OPENCV_WINDOW_LEFT,joined_image);
+            cv::waitKey(1);
+             
+        };
         framepoints.clear();
-        triangulator.Generate3DCoordinates(matches,framepoints,0.110074,457.95,cam_left.intrinsics);
-        //std::cout<<"Debug : Framepoints size"<<std::endl;
-        //std::cout<<framepoints.size()<<std::endl;
+        triangulator.Generate3DCoordinates(matches,framepoints,0.110074,435.20,cam_left.intrinsics);
+        matches.clear();
         return;
     };
 
     void UndistortImages(cv::Mat cam_l_intrinsics,cv::Mat cam_r_intrinsics,std::vector<float> l_distortion,std::vector<float> r_distortion,cv::Mat& image_l,cv::Mat& image_r){
 
-        cv::undistort(image_l,undistorted_l,cam_l_intrinsics,l_distortion);
-        cv::undistort(image_r,undistorted_r,cam_r_intrinsics,r_distortion);
+        cv::Mat mapl1, mapl2;
+        cv::Mat mapr1, mapr2;
+
+        std::cout<<cam_l_intrinsics<<std::endl;
+        cv::Mat new_intrinsics_l, new_intrinsics_r;
+        new_intrinsics_l = cv::Mat(3,3,cv::DataType<float>::type);    
+        new_intrinsics_l.at<float>(0,0) = 435.20;
+        new_intrinsics_l.at<float>(0,1) = 0.0;
+        new_intrinsics_l.at<float>(0,2) = 367.20;
+        new_intrinsics_l.at<float>(1,0) = 0.0;
+        new_intrinsics_l.at<float>(1,1) = 435.45;
+        new_intrinsics_l.at<float>(1,2) = 252.0;
+        new_intrinsics_l.at<float>(2,0) = 0.0;
+        new_intrinsics_l.at<float>(2,1) = 0.0;
+        new_intrinsics_l.at<float>(2,2) = 1.0;
+
+        new_intrinsics_r = cv::Mat(3,3,cv::DataType<float>::type);    
+        new_intrinsics_r.at<float>(0,0) = 435.654;
+        new_intrinsics_r.at<float>(0,1) = 0.0;
+        new_intrinsics_r.at<float>(0,2) = 367.20;
+        new_intrinsics_r.at<float>(1,0) = 0.0;
+        new_intrinsics_r.at<float>(1,1) = 435.20;
+        new_intrinsics_r.at<float>(1,2) = 252.0;
+        new_intrinsics_r.at<float>(2,0) = 0.0;
+        new_intrinsics_r.at<float>(2,1) = 0.0;
+        new_intrinsics_r.at<float>(2,2) = 1.0;
+
+        cv::Mat identity;
+        identity = cv::Mat(3,3,cv::DataType<float>::type);
+        cv::setIdentity(identity);                               
+
+        cv::fisheye::initUndistortRectifyMap(cam_l_intrinsics, l_distortion, cv::Matx33d::eye(), new_intrinsics_l, image_l.size(), CV_32FC1, mapl1, mapl2);
+        cv::fisheye::initUndistortRectifyMap(cam_r_intrinsics, l_distortion, cv::Matx33d::eye(), new_intrinsics_r, image_r.size(), CV_32FC1, mapr1, mapr2);
+
+        cv::remap(image_l, undistorted_l, mapl1, mapl2, cv::INTER_LINEAR);
+        cv::remap(image_r, undistorted_r, mapr1, mapr2, cv::INTER_LINEAR);
+        cv::imshow(OPENCV_WINDOW_LEFT,undistorted_l);
+        cv::imshow(OPENCV_WINDOW_RIGHT,undistorted_r);
+        cam_left.intrinsics << 435.20, 0.0, 367.20,
+                                0.0, 435.20, 252.0,
+                                0.0, 0.0, 1.0;
+
+        cam_right.intrinsics = cam_left.intrinsics;
+
+        cv::waitKey(0);
         return;
 
     };
@@ -857,26 +897,24 @@ class TestSharedPointers{
 int main(int argc, char **argv){
     ros::init(argc,argv,"image_listener");
     ros::NodeHandle nh;
-    std::string cam_left_file = argv[1];
-    std::string cam_right_file = argv[2];
+
+    std::string image_list_left_file = argv[1];
+    std::string image_list_right_file = argv[2];
+    std::filebuf image_list_left_buf;
+    std::filebuf image_list_right_buf;
     
-    std::filebuf fb_left;
-    std::filebuf fb_right;
+    image_list_left_buf.open(image_list_left_file,std::ios::in);
+    image_list_right_buf.open(image_list_right_file,std::ios::in);
+    
+    cam_left_image_list = GetImageFilenames(image_list_left_buf);
+    cam_right_image_list = GetImageFilenames(image_list_right_buf);
 
     cv::namedWindow(OPENCV_WINDOW_LEFT);
     cv::namedWindow(OPENCV_WINDOW_RIGHT);
-
-    fb_left.open(cam_left_file,std::ios::in);
-    fb_right.open(cam_right_file,std::ios::in);
-    std::cout<<cam_left_file<<std::endl;
-    std::cout<<cam_right_file<<std::endl;
     
-    cam_left_image_list = GetImageFilenames(fb_left);
-    cam_right_image_list = GetImageFilenames(fb_right);
-    
-    //TestIncrementalMotion test(nh);
-    //TestPoseOptimizer test;
+    TestIncrementalMotion test(nh);
+    //TestFindCorrespondences test;
     //TestDetectFeatures test;
-    TestFindCorrespondences test;
+    ///TestGetMatchedKeypoints test;
     return 0;
 }
