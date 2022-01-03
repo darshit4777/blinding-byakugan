@@ -8,6 +8,7 @@ project(sharp-eye)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 #list(APPEND CMAKE_PREFIX_PATH "/home/darshit/blinding-byakugan/src/g2o/generated/")
+
 list(APPEND CMAKE_MODULE_PATH "/home/darshit/Code/blinding-byakugan/src/g2o/cmake_modules")
 message(STATUS "CMAKE_MODULE_PATH = ${CMAKE_MODULE_PATH}")
 find_package(catkin REQUIRED COMPONENTS
@@ -22,6 +23,7 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 
+list(APPEND CMAKE_MODULE_PATH "/home/darshit/Code/blinding-byakugan/src/g2o/cmake_modules")
 find_package(G2O REQUIRED)
 include_directories( ${G2O_INCLUDE_DIRS} )
 add_definitions( ${G2O_DEFINITIONS} )
