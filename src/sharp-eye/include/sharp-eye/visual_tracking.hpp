@@ -143,6 +143,8 @@ class VisualTracking{
     void CreateAndUpdateLandmarks(Frame* current_frame_ptr,LocalMap* lmap_ptr);
     
     void RecoverLostPoints(Frame* current_frame_ptr);
+
+    void RANSACOutlierRejection();
     
     private:
     void InitializeStateJacobian();
