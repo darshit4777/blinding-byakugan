@@ -264,17 +264,6 @@ Eigen::Transform<float,3,2> VisualTracking::EstimateIncrementalMotion(){
     return current_frame_ptr->T_world2cam;
 };
 
-void VisualTracking::RANSACOutlierRejection(){
-    LocalMap* lmap_ptr = map.GetLastLocalMap();
-    Frame* previous_frame_ptr = lmap_ptr->GetPreviousFrame();
-    Frame* current_frame_ptr = lmap_ptr->GetLastFrame();
-    optimizer->InitializeRANSAC(current_frame_ptr,0.9999,0.5,3);
-    std::cout<<optimizer->ransac_params.n<<" datapoints were found for outlier rejection"<<std::endl;
-    optimizer->RANSACConverge();
-    optimizer->RANSACUpdateFrame();
-    return;
-};
-
 void VisualTracking::CreateAndUpdateLandmarks(Frame* current_frame_ptr,LocalMap* lmap_ptr){
     //Update the landmarks
 
