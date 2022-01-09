@@ -423,7 +423,7 @@ void PoseOptimizer::Converge(){
         
         //std::cout<<"Error Delta "<<error_delta<<std::endl;
 
-        if((error_delta < 1e-5) && (iteration_error < parameters.solver_maximum_error)){
+        if((error_delta < 1e-5)){
             std::cout<<"Converged after "<<i<<" iterations"<<std::endl;
             Update();
             return;
