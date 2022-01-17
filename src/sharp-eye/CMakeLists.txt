@@ -3,6 +3,7 @@ project(sharp-eye)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 #add_compile_options(-std=c++11)
+set(CMAKE_CXX_STANDARD 11)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -164,6 +165,7 @@ add_library(pose_optimizer
 add_library(point_sim
   src/point_sim.cpp
 )
+add_library(utils src/utils.cpp)
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
@@ -172,11 +174,12 @@ add_dependencies(visual_triangulation ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catk
 add_dependencies(visual_tracking ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(pose_optimizer ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(point_sim ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(utils ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-add_executable(test_node src/tests.cpp)
+#add_executable(testdisplayimages test/visual_triangulation/testdisplayimages.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -186,23 +189,16 @@ add_executable(test_node src/tests.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-add_dependencies(test_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+#add_dependencies(testdisplayimages ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS} gtest)
 
 ## Specify libraries to link a library or executable target against
 
-target_link_libraries(test_node
-  ${catkin_LIBRARIES}
-  ${OpenCV_LIBS}
-  visual_triangulation
-  visual_tracking
-  pose_optimizer
-  ${PCL_LIBRARIES}
-  ${G2O_LIBRARY_DIRS}
-  point_sim
-  world_map
-  local_map
-  landmark
-)
+#target_link_libraries(testdisplayimages
+#  ${catkin_LIBRARIES}
+#  ${OpenCV_LIBS}
+#  utils
+#  gtest
+#)
 
 #############
 ## Install ##
@@ -249,11 +245,12 @@ target_link_libraries(test_node
 #############
 ## Testing ##
 #############
-
-## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_sharp-eye.cpp)
+enable_testing()
+add_executable(TestDisplayImages test/visual_triangulation/testdisplayimages.cpp)
+target_link_libraries(TestDisplayImages utils gtest_main ${catkin_LIBRARIES} ${OpenCV_LIBS})
+include(GoogleTest)
 # if(TARGET ${PROJECT_NAME}-test)
-#   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
+#   
 # endif()
 
 ## Add folders to be run by python nosetests
