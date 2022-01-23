@@ -253,6 +253,8 @@ add_executable(TestDisplayImages test/visual_triangulation/testdisplayimages.cpp
 target_link_libraries(TestDisplayImages gtest_main visual_triangulation_fixtures utils ${catkin_LIBRARIES} ${OpenCV_LIBS})
 add_executable(TestGetMatchedKeypoints test/visual_triangulation/testgetmatchedkeypoints.cpp)
 target_link_libraries(TestGetMatchedKeypoints gtest_main visual_triangulation_fixtures utils visual_triangulation ${catkin_LIBRARIES} ${OpenCV_LIBS})
+add_executable(TestGenerate3DCoordinates test/visual_triangulation/testgenerate3dcoordinates.cpp)
+target_link_libraries(TestGenerate3DCoordinates gtest_main visual_triangulation_fixtures utils visual_triangulation ${catkin_LIBRARIES} ${OpenCV_LIBS})
 include(GoogleTest)
 # if(TARGET ${PROJECT_NAME}-test)
 #   
