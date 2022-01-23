@@ -167,6 +167,9 @@ add_library(point_sim
 )
 add_library(utils src/utils.cpp)
 
+add_library(visual_triangulation_fixtures 
+test/visual_triangulation/visual_triangulation_fixtures.cpp)
+
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
@@ -175,7 +178,7 @@ add_dependencies(visual_tracking ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EX
 add_dependencies(pose_optimizer ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(point_sim ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(utils ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-
+add_dependencies(visual_triangulation_fixtures ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
@@ -247,7 +250,7 @@ add_dependencies(utils ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TAR
 #############
 enable_testing()
 add_executable(TestDisplayImages test/visual_triangulation/testdisplayimages.cpp)
-target_link_libraries(TestDisplayImages utils gtest_main ${catkin_LIBRARIES} ${OpenCV_LIBS})
+target_link_libraries(TestDisplayImages utils gtest_main visual_triangulation_fixtures ${catkin_LIBRARIES} ${OpenCV_LIBS})
 include(GoogleTest)
 # if(TARGET ${PROJECT_NAME}-test)
 #   
