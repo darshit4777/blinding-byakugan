@@ -251,6 +251,8 @@ add_dependencies(visual_triangulation_fixtures ${${PROJECT_NAME}_EXPORTED_TARGET
 enable_testing()
 add_executable(TestDisplayImages test/visual_triangulation/testdisplayimages.cpp)
 target_link_libraries(TestDisplayImages utils gtest_main visual_triangulation_fixtures ${catkin_LIBRARIES} ${OpenCV_LIBS})
+add_executable(TestGetMatchedKeypoints test/visual_triangulation/testgetmatchedkeypoints.cpp)
+target_link_libraries(TestGetMatchedKeypoints utils gtest_main visual_triangulation_fixtures visual_triangulation ${catkin_LIBRARIES} ${OpenCV_LIBS})
 include(GoogleTest)
 # if(TARGET ${PROJECT_NAME}-test)
 #   
