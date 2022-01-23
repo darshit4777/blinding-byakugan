@@ -178,7 +178,7 @@ add_dependencies(visual_tracking ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EX
 add_dependencies(pose_optimizer ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(point_sim ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(utils ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(visual_triangulation_fixtures ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(visual_triangulation_fixtures utils ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
@@ -250,9 +250,9 @@ add_dependencies(visual_triangulation_fixtures ${${PROJECT_NAME}_EXPORTED_TARGET
 #############
 enable_testing()
 add_executable(TestDisplayImages test/visual_triangulation/testdisplayimages.cpp)
-target_link_libraries(TestDisplayImages utils gtest_main visual_triangulation_fixtures ${catkin_LIBRARIES} ${OpenCV_LIBS})
+target_link_libraries(TestDisplayImages gtest_main visual_triangulation_fixtures utils ${catkin_LIBRARIES} ${OpenCV_LIBS})
 add_executable(TestGetMatchedKeypoints test/visual_triangulation/testgetmatchedkeypoints.cpp)
-target_link_libraries(TestGetMatchedKeypoints utils gtest_main visual_triangulation_fixtures visual_triangulation ${catkin_LIBRARIES} ${OpenCV_LIBS})
+target_link_libraries(TestGetMatchedKeypoints gtest_main visual_triangulation_fixtures utils visual_triangulation ${catkin_LIBRARIES} ${OpenCV_LIBS})
 include(GoogleTest)
 # if(TARGET ${PROJECT_NAME}-test)
 #   

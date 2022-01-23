@@ -1,3 +1,4 @@
+#pragma once
 #include <opencv2/imgproc.hpp>
 #include <gtest/gtest.h>
 #include <opencv2/core.hpp>
@@ -23,10 +24,6 @@ class VisualTriangulationTest : public ::testing::Test {
     // Opencv Windows
     std::string OPENCV_WINDOW_LEFT; 
     std::string OPENCV_WINDOW_RIGHT;
-
-    // Image indexes
-    unsigned int image_idx;
-    unsigned int image_idx_max;
 
     // Image filepaths
     std::string image_path_left;
@@ -55,5 +52,13 @@ class VisualTriangulationTest : public ::testing::Test {
      * 
      */
     void TearDown() override;
+
+    /**
+     * @brief Get the Left Image 
+     * 
+     * @param image_idx 
+     * @return cv::Mat 
+     */
+    cv::Mat GetImage(int image_idx,std::string cam);
 
 };
