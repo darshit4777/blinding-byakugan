@@ -43,7 +43,7 @@ cv::Mat VisualTriangulationTest::GetImage(int image_idx,std::string cam){
             image_filename = image_path_left + cam_left_image_list[image_idx][0];
         }
         if(cam=="right"){
-            image_filename = image_path_left + cam_left_image_list[image_idx][0];
+            image_filename = image_path_right + cam_right_image_list[image_idx][0];
         }
         return GetImageFromFilename(image_filename);
     }
