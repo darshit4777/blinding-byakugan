@@ -12,6 +12,7 @@ set(CMAKE_CXX_STANDARD 11)
 
 list(APPEND CMAKE_MODULE_PATH "/home/darshit/Code/blinding-byakugan/src/g2o/cmake_modules")
 message(STATUS "CMAKE_MODULE_PATH = ${CMAKE_MODULE_PATH}")
+set(slam_datatypes_DIR "/home/darshit/Code/blinding-byakaguan/src/slam_datatypes")
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   tf2_ros
@@ -176,13 +177,24 @@ test/visual_tracking/visual_tracking_fixture.cpp)
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
-add_dependencies(visual_triangulation ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(visual_triangulation ${${PROJECT_NAME}_EXPORTED_TARGETS}
+${catkin_EXPORTED_TARGETS})
+
 add_dependencies(visual_tracking ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(pose_optimizer ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(point_sim ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(utils ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(visual_triangulation_fixtures utils ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(visual_tracking_fixture utils visual_triangulation_fixtures visual_triangulation visual_tracking ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+add_dependencies(pose_optimizer ${${PROJECT_NAME}_EXPORTED_TARGETS}
+${catkin_EXPORTED_TARGETS})
+
+add_dependencies(point_sim ${${PROJECT_NAME}_EXPORTED_TARGETS}
+${catkin_EXPORTED_TARGETS})
+
+add_dependencies(utils ${${PROJECT_NAME}_EXPORTED_TARGETS}
+${catkin_EXPORTED_TARGETS})
+
+add_dependencies(visual_triangulation_fixtures ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+add_dependencies(visual_tracking_fixture ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
@@ -253,12 +265,52 @@ add_dependencies(visual_tracking_fixture utils visual_triangulation_fixtures vis
 ## Testing ##
 #############
 enable_testing()
+
 add_executable(TestDisplayImages test/visual_triangulation/testdisplayimages.cpp)
-target_link_libraries(TestDisplayImages gtest_main visual_triangulation_fixtures utils ${catkin_LIBRARIES} ${OpenCV_LIBS})
+target_link_libraries(TestDisplayImages
+  gtest_main
+  visual_triangulation_fixtures
+  utils 
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBS}
+)
+
 add_executable(TestGetMatchedKeypoints test/visual_triangulation/testgetmatchedkeypoints.cpp)
-target_link_libraries(TestGetMatchedKeypoints gtest_main visual_triangulation_fixtures utils visual_triangulation ${catkin_LIBRARIES} ${OpenCV_LIBS})
+target_link_libraries(TestGetMatchedKeypoints
+  gtest_main
+  visual_triangulation_fixtures
+  utils
+  visual_triangulation
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBS}
+)
+
 add_executable(TestGenerate3DCoordinates test/visual_triangulation/testgenerate3dcoordinates.cpp)
-target_link_libraries(TestGenerate3DCoordinates gtest_main visual_triangulation_fixtures utils visual_triangulation ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES})
+target_link_libraries(TestGenerate3DCoordinates
+  gtest_main
+  visual_triangulation_fixtures
+  utils
+  visual_triangulation
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBS}
+  ${PCL_LIBRARIES}
+)
+
+add_executable(TestFindCorrespondences test/visual_tracking/testfindcorrespondences.cpp)
+target_link_libraries(TestFindCorrespondences 
+  gtest_main
+  visual_tracking_fixture
+  utils
+  visual_tracking
+  pose_optimizer
+  landmark
+  local_map
+  world_map
+  visual_triangulation
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBS} ${PCL_LIBRARIES}
+)
+
 include(GoogleTest)
 # if(TARGET ${PROJECT_NAME}-test)
 #   

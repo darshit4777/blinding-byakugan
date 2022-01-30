@@ -1,4 +1,3 @@
-#pragma once
 #include <opencv2/imgproc.hpp>
 #include <gtest/gtest.h>
 #include <opencv2/core.hpp>

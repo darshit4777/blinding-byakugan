@@ -4,12 +4,26 @@
 #include <sharp-eye/visual_triangulation_fixtures.hpp>
 #include <gtest/gtest.h>
 
-class VisualTrackingTest : public VisualTriangulationTest{
+class VisualTrackingTest : public ::testing::Test{
 
-    protected:
-    // Since image handling is taken care of by Visual Triangulation Test,
-    // We focus only on members and methods that are strictly required by,
-    // tracking. 
+    protected: 
+    // Opencv image matrices
+    cv::Mat image_l;
+    cv::Mat image_r;
+    cv::Mat undistorted_l;
+    cv::Mat undistorted_r;
+    
+    // Image lists
+    std::vector<std::vector<std::string>> cam_left_image_list;
+    std::vector<std::vector<std::string>> cam_right_image_list;
+    
+    // Opencv Windows
+    std::string OPENCV_WINDOW_LEFT; 
+    std::string OPENCV_WINDOW_RIGHT;
+
+    // Image filepaths
+    std::string image_path_left;
+    std::string image_path_right;
 
     // Triangulation
     VisualTriangulation triangulator;
@@ -64,5 +78,13 @@ class VisualTrackingTest : public VisualTriangulationTest{
      * @return Frame 
      */
     boost::shared_ptr<Frame> GetFrame(cv::Mat image_l, cv::Mat image_r);
+
+    /**
+     * @brief Get image specified by string and image idx 
+     * 
+     * @param image_idx 
+     * @return cv::Mat 
+     */
+    cv::Mat GetImage(int image_idx,std::string cam);
 
 };

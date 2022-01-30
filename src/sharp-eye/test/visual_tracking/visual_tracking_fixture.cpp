@@ -7,6 +7,26 @@ VisualTrackingTest::VisualTrackingTest(){
      * and tracker
      * 
      */
+    // Create display windows
+    OPENCV_WINDOW_LEFT = "Left Image window";
+    OPENCV_WINDOW_RIGHT = "Right Image window";
+    cv::namedWindow(OPENCV_WINDOW_LEFT);
+    cv::namedWindow(OPENCV_WINDOW_RIGHT);
+    // Set image file paths
+    image_path_left ="/home/darshit/Code/blinding-byakugan/MH_01_easy/MH_01_easy.txt.d/left_camera/";
+    image_path_right = "/home/darshit/Code/blinding-byakugan/MH_01_easy/MH_01_easy.txt.d/right_camera/";
+
+    std::string image_list_left_file = "/home/darshit/Code/blinding-byakugan/MH_01_easy/MH_01_easy.txt.d/left_cam_fnames.txt"; 
+    std::string image_list_right_file = "/home/darshit/Code/blinding-byakugan/MH_01_easy/MH_01_easy.txt.d/right_cam_fnames.txt";
+
+    std::filebuf image_list_left_buf;
+    std::filebuf image_list_right_buf;
+
+    image_list_left_buf.open(image_list_left_file,std::ios::in);
+    image_list_right_buf.open(image_list_right_file,std::ios::in);
+
+    cam_left_image_list = GetImageFilenamesFromBuffer(image_list_left_buf);
+    cam_right_image_list = GetImageFilenamesFromBuffer(image_list_right_buf);
 
     cam_left.intrinsics << 458.654,     0.0,    367.215,
                                0.0, 457.296,    248.375,
@@ -80,4 +100,21 @@ boost::shared_ptr<Frame> VisualTrackingTest::GetFrame(cv::Mat image_l, cv::Mat i
     boost::shared_ptr<Frame> frame_ptr = boost::make_shared<Frame>(frame);
     return frame_ptr;
 
+}
+
+cv::Mat VisualTrackingTest::GetImage(int image_idx,std::string cam){
+    std::string image_filename;
+    
+    try{
+        if (cam=="left"){
+            image_filename = image_path_left + cam_left_image_list[image_idx][0];
+        }
+        if(cam=="right"){
+            image_filename = image_path_right + cam_right_image_list[image_idx][0];
+        }
+        return GetImageFromFilename(image_filename);
+    }
+    catch(std::exception& e){
+        std::cout<<e.what()<<std::endl;
+    };
 }
