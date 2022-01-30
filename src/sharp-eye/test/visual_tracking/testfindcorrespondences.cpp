@@ -5,8 +5,9 @@
 
 TEST_F(VisualTrackingTest,TestFindCorrespondences){
     int image_idx = 0;
-    int image_idx_max = 10;
+    int image_idx_max = 2;
 
+    LocalMap* lmap_ptr = new LocalMap;
     while(image_idx < image_idx_max){
         cv::Mat image_l, image_r;
         image_l = GetImage(image_idx,"left");
@@ -42,7 +43,7 @@ TEST_F(VisualTrackingTest,TestFindCorrespondences){
                     current_frame_point.x += image_l.cols;
                     cv::line(joined_image,previous_frame_point,current_frame_point,(0,0,255),1);
                     cv::imshow(OPENCV_WINDOW_LEFT,joined_image);
-                    cv::waitKey(1);
+                    cv::waitKey(200);
                 } 
             }
 

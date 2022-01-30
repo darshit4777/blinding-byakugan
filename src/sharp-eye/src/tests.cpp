@@ -117,20 +117,7 @@ void GetCameraImages(int image_idx){
     //cv::waitKey(0);
 
     return;
-}
-
-void GetProslamCameraImages(int image_idx){
-    //std::string image_path = "/home/darshit/Code/proslam/MH_01_easy/MH_01_easy.txt.d/";
-    //std::vector<std::string> fname_row_l = image_list[image_idx];
-    //std::vector<std::string> fname_row_r = image_list[image_idx + 1];
-//
-    //std::string image_fname_left = fname_row_l[0];
-    //std::string image_fname_right = fname_row_r[0];
-//
-    //image_l = cv::imread(image_path + image_fname_left);
-    //image_r = cv::imread(image_path + image_fname_right);
 };
-
 
 class TestDetectFeatures{
     public:
@@ -144,7 +131,7 @@ class TestDetectFeatures{
         while(image_idx < image_idx_max){
             
             // Get new camera images
-            GetProslamCameraImages(image_idx);
+            GetCameraImages(image_idx);
 
             triangulator.DetectAndComputeFeatures(&image_l,features,true);
             cv::imshow(OPENCV_WINDOW_LEFT,image_l);
@@ -190,7 +177,7 @@ class TestGetMatchedKeypoints{
             
             // Get new images
             //GetCameraImages(image_idx);
-            GetProslamCameraImages(image_idx);
+            GetCameraImages(image_idx);
             features_l.clear();
             features_l = triangulator.DetectAndComputeFeatures(&image_l,features_l,false);
             
@@ -264,7 +251,7 @@ class TestGenerate3DCoordinates{
         int count = 0;
         while(image_idx < image_idx_max){
             
-            GetProslamCameraImages(image_idx);
+            GetCameraImages(image_idx);
             features_l.clear();
             features_l = triangulator.DetectAndComputeFeatures(&image_l,features_l,false);
             
@@ -421,9 +408,6 @@ class TestIncrementalMotion{
     Camera cam_left;
     Camera cam_right;
 
-    cv::Mat cam_l_intrinsics;
-    cv::Mat cam_r_intrinsics;
-
     // Triangulation
     VisualTriangulation triangulator;
     std::vector<KeypointWD> features_l;
@@ -451,20 +435,8 @@ class TestIncrementalMotion{
         cam_right.intrinsics << 435.20,        0.0, 367.215,
                                     0.0,    435.134, 252.375,
                                     0.0,        0.0,    1.0;
-                                    
-
-        T_body2caml.matrix()<<   0.0148655429818, -0.999880929698, 0.00414029679422, -0.0216401454975,
-                                    0.999557249008, 0.0149672133247, 0.025715529948, -0.064676986768,
-                                -0.0257744366974, 0.00375618835797, 0.999660727178, 0.00981073058949,
-                                0.0, 0.0, 0.0, 1.0;
-
-        T_body2camr.matrix()<<  0.0125552670891, -0.999755099723, 0.0182237714554, -0.0198435579556,
-                                0.999598781151, 0.0130119051815, 0.0251588363115, 0.0453689425024,
-                                -0.0253898008918, 0.0179005838253, 0.999517347078, 0.00786212447038,
-                                0.0, 0.0, 0.0, 1.0;
         
         tracking = new VisualTracking(cam_left,cam_right);
-        tracking->T_caml2camr = T_body2caml.inverse() * T_body2camr;
 
         nodehandle = nh;
         pose_publisher = nh.advertise<nav_msgs::Odometry>("/visual_odometry",10);

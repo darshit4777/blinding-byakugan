@@ -199,19 +199,32 @@ add_dependencies(visual_tracking_fixture ${${PROJECT_NAME}_EXPORTED_TARGETS} ${c
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 #add_executable(testdisplayimages test/visual_triangulation/testdisplayimages.cpp)
+add_executable(test_node src/tests.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
 ## e.g. "rosrun someones_pkg node" instead of "rosrun someones_pkg someones_pkg_node"
 # set_target_properties(${PROJECT_NAME}_node PROPERTIES OUTPUT_NAME node PREFIX "")
+add_dependencies(test_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 #add_dependencies(testdisplayimages ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS} gtest)
-
 ## Specify libraries to link a library or executable target against
-
+target_link_libraries(test_node
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBS}
+  visual_triangulation
+  visual_tracking
+  pose_optimizer
+  ${PCL_LIBRARIES}
+  ${G2O_LIBRARY_DIRS}
+  point_sim
+  world_map
+  local_map
+  landmark
+)
 #target_link_libraries(testdisplayimages
 #  ${catkin_LIBRARIES}
 #  ${OpenCV_LIBS}
@@ -298,6 +311,20 @@ target_link_libraries(TestGenerate3DCoordinates
 
 add_executable(TestFindCorrespondences test/visual_tracking/testfindcorrespondences.cpp)
 target_link_libraries(TestFindCorrespondences 
+  gtest_main
+  visual_tracking_fixture
+  utils
+  visual_tracking
+  pose_optimizer
+  landmark
+  local_map
+  world_map
+  visual_triangulation
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBS} ${PCL_LIBRARIES}
+)
+add_executable(TestIncrementalMotion test/visual_tracking/testincrementalmotion.cpp)
+target_link_libraries(TestIncrementalMotion 
   gtest_main
   visual_tracking_fixture
   utils

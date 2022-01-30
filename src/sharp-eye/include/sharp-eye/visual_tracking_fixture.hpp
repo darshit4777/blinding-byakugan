@@ -36,11 +36,7 @@ class VisualTrackingTest : public ::testing::Test{
     // Cameras
     Camera cam_left;
     Camera cam_right;
-
-    // Local Map
-    LocalMap* lmap_ptr;
-
-
+    
     // Visual Tracking Object
     VisualTracking* tracker;
 

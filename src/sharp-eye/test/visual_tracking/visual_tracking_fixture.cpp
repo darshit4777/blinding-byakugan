@@ -28,23 +28,21 @@ VisualTrackingTest::VisualTrackingTest(){
     cam_left_image_list = GetImageFilenamesFromBuffer(image_list_left_buf);
     cam_right_image_list = GetImageFilenamesFromBuffer(image_list_right_buf);
 
-    cam_left.intrinsics << 458.654,     0.0,    367.215,
-                               0.0, 457.296,    248.375,
+    cam_left.intrinsics << 435.20,     0.0,    367.215,
+                               0.0, 435.20,    252.375,
                                0.0,     0.0,        1.0;
 
-    cam_right.intrinsics << 457.587,        0.0, 379.999,
-                                0.0,    456.134, 255.238,
-                                0.05,        0.0,    1.0;                                
+    cam_right.intrinsics << 435.20,        0.0, 367.215,
+                                0.0,    435.134, 252.375,
+                                0.0,        0.0,    1.0;                                
 
     
-    lmap_ptr = new LocalMap;
     tracker = new VisualTracking(cam_left,cam_right);
-    focal_length = 457.975;
-    baseline = 0.11;
+    focal_length = 435.20;
+    baseline = 0.110074;
 }
 
 VisualTrackingTest::~VisualTrackingTest(){
-    delete lmap_ptr;
     delete tracker;
 }
 
