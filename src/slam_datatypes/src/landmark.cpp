@@ -197,7 +197,7 @@ void Landmark::PoseOptimizer::Converge(){
     return;
 };
 
-void Landmark::UpdateLandmark(boost::shared_ptr<Framepoint> fp){
+void Landmark::UpdateLandmarkPosition(boost::shared_ptr<Framepoint> fp){
     /**
      * @brief Updating the position of the landmark by incorporating a new fp
      * Running an optimization, to update the position of the landmark using 
@@ -247,6 +247,14 @@ void Landmark::UpdateLandmark(boost::shared_ptr<Framepoint> fp){
     return;
 
 };
+
+void Landmark::UpdateLandmarkTrack(boost::shared_ptr<Framepoint> fp){
+    // Copying the pointer to get shared ownership
+    boost::shared_ptr<Framepoint> fp_new = fp;
+    optimizer.measurement_vector.push_back(fp_new);
+    return;
+};
+
 Landmark::~Landmark(){
     return;
 };

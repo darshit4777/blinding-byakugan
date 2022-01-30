@@ -820,7 +820,7 @@ class TestLandmarkOptimization{
 
         // Now we try landmark updates for every landmark
         for(int i = 1; i < framepoint_vector.size(); i++){
-            landmark.UpdateLandmark(framepoint_vector[i]);
+            landmark.UpdateLandmarkPosition(framepoint_vector[i]);
             std::cout<<"The updated landmark position is "<<std::endl;
             std::cout<<landmark.world_coordinates<<std::endl;
             std::cout<<"The no of updates are "<<landmark.updates<<std::endl;

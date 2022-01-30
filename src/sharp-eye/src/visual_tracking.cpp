@@ -165,13 +165,47 @@ int VisualTracking::FindCorrespondences(FramepointPointerVector& previous_frame,
         // and then the corresponding index of the current frame must be assigned to the
         // previous frame and vice versa.
         
-        // Assigning to each others previous and next
+        // A match has been found Assigning to each others previous and next
         int current_frame_idx = match_shortlist[good_matches[0].trainIdx];
-        Framepoint* current_frame_ptr = current_frame[current_frame_idx].get();
-        query_framepoint->next = current_frame_ptr;
-        current_frame_ptr->previous = query_framepoint;
-        //query_framepoint.next = boost::make_shared<Framepoint>( current_frame[current_frame_idx]);
-        //current_frame[current_frame_idx].previous = boost::make_shared<Framepoint>(query_framepoint);
+        Framepoint* current_framepoint = current_frame[current_frame_idx].get();
+        query_framepoint->next = current_framepoint;
+        current_framepoint->previous = query_framepoint;
+        
+        // Updating Tracks Current Framepoint
+        current_framepoint->track_length = query_framepoint->track_length + 1;
+
+        // Creating Landmarks / Updating Landmark Tracks with new Framepoints
+        if(current_framepoint->track_length > 2){
+            if(current_framepoint->previous->landmark_set){
+                // Update the landmark track
+
+                current_framepoint->associated_landmark = current_framepoint->previous->associated_landmark;
+                current_framepoint->associated_landmark->UpdateLandmarkTrack(current_frame[current_frame_idx]);
+                
+                // Check if the landmark already exists in the actively tracked list
+                auto result = std::find(actively_tracked_landmarks.begin(),actively_tracked_landmarks.end(),current_framepoint->associated_landmark);
+                if(result != actively_tracked_landmarks.end()){
+                    // No copy found adding the landmark
+                    actively_tracked_landmarks.push_back(current_framepoint->previous->associated_landmark);
+                }
+            }
+            else{
+                // Create a landmark
+                Landmark lm(current_frame[current_frame_idx]);
+                boost::shared_ptr<Landmark> lm_ptr = boost::make_shared<Landmark>(lm);
+                
+                // Add the landmark to the actively tracked list and the current local map
+
+                // Get the lmap ptr
+                LocalMap* lmap_ptr = this->map.GetLastLocalMap();
+                lmap_ptr->AddLandmark(lm_ptr);
+
+                // Add to list of actively tracked landmarks
+                actively_tracked_landmarks.push_back(lm_ptr);
+            }
+        }
+
+
         correspondences++;
     };
 
@@ -282,14 +316,13 @@ void VisualTracking::CreateAndUpdateLandmarks(Frame* current_frame_ptr,LocalMap*
             // Creating a shifting pointer
             Framepoint* framepoint_ptr;
             framepoint_ptr = fp;
-            
             while(!track_broken){
                 
                 if(framepoint_ptr->previous != nullptr){
                     // Check if the previous has a landmark associated with it
                     if(framepoint_ptr->landmark_set){
                         // Previous has a landmark associated with it - update it.
-                        framepoint_ptr->associated_landmark->UpdateLandmark(current_frame_ptr->points[i]);
+                        framepoint_ptr->associated_landmark->UpdateLandmarkPosition(current_frame_ptr->points[i]);
                         // Need to be sure here that we aren't adding the same landmark again and again
                         auto test_ptr = std::find(actively_tracked_landmarks.begin(),actively_tracked_landmarks.end(),framepoint_ptr->associated_landmark);
                         if(test_ptr == actively_tracked_landmarks.end()){

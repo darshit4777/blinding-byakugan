@@ -217,6 +217,16 @@ FramepointVector VisualTriangulation::Generate3DCoordinates(MatchVector &matched
         // Each matched feature is stored as a pair of KeypointWD
         // The first is left and the second is right
         Framepoint framepoint;
+        //Initialization
+        // TODO : Convert Framepoints to class. Initialization can happen in the 
+        // constructor.
+        framepoint.next = NULL;
+        framepoint.previous = NULL;
+        framepoint.inlier = false;
+        framepoint.landmark_set = false;
+        framepoint.associated_landmark = NULL;
+        framepoint.track_length = 0;
+
         framepoint.keypoint_l = matched_features[i].first;
         framepoint.keypoint_r = matched_features[i].second;
 

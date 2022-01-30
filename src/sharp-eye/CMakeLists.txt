@@ -338,6 +338,21 @@ target_link_libraries(TestIncrementalMotion
   ${OpenCV_LIBS} ${PCL_LIBRARIES}
 )
 
+add_executable(TestLandmarkCreation test/visual_tracking/testlandmarkcreation.cpp)
+target_link_libraries(TestLandmarkCreation 
+  gtest_main
+  visual_tracking_fixture
+  utils
+  visual_tracking
+  pose_optimizer
+  landmark
+  local_map
+  world_map
+  visual_triangulation
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBS} ${PCL_LIBRARIES}
+)
+
 include(GoogleTest)
 # if(TARGET ${PROJECT_NAME}-test)
 #   

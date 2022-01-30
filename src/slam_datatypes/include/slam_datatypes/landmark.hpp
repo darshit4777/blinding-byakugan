@@ -128,11 +128,18 @@ class Landmark{
     Landmark(boost::shared_ptr<Framepoint> fp);
 
     /**
-     * @brief Update the landmark pose estimate with a new measurement
+     * @brief Update the landmark position estimate with a new measurement
      * 
      * @param fp 
      */
-    void UpdateLandmark(boost::shared_ptr<Framepoint> fp);
+    void UpdateLandmarkPosition(boost::shared_ptr<Framepoint> fp);
+
+    /**
+     * @brief Updates the track / measurement vector of the landmark
+     * 
+     * @param fp 
+     */
+    void UpdateLandmarkTrack(boost::shared_ptr<Framepoint> fp);
 
     ~Landmark();
 };

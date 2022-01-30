@@ -21,6 +21,7 @@ struct Framepoint{
     //Framepoint *next, *previous;
     //boost::shared_ptr<Framepoint> next,previous;
     Framepoint *next,*previous;
+    unsigned int track_length;
  
     bool inlier;
     //boost::shared_ptr<Landmark> associated_landmark;
